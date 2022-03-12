@@ -1,7 +1,7 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {bellatrix, RootHex, Root} from "@chainsafe/lodestar-types";
 import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
-import {fromHex, sleep} from "@chainsafe/lodestar-utils";
+import {fromHex} from "@chainsafe/lodestar-utils";
 
 import {ErrorJsonRpcResponse, HttpRpcError, JsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient";
 import {
@@ -234,7 +234,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       },
       {
         // We only retry the forkchoice updated when there is payload attributes
-        retries: apiPayloadAttributes !== undefined ? this.retryAttempts : 1,
+        retries: apiPayloadAttributes === undefined ? 1 : this.retryAttempts,
         retryDelay: this.retryDelay,
       }
     );
