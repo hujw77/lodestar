@@ -275,6 +275,38 @@ describe("ExecutionEngine / http", () => {
       expect(reqJsonRpcPayload).to.deep.equal(request, "Wrong request JSON RPC payload");
     });
 
+    it("notifyForkchoiceUpdate no retry when no pay load attributes", async function () {
+      /**
+       *  curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"engine_forkchoiceUpdated","params":[{"headBlockHash":"0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174", "finalizedBlockHash":"0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174"}],"id":67}' http://localhost:8545
+       */
+      errorResponsesBeforeSuccess = 2;
+      const forkChoiceHeadData = {
+        headBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
+        safeBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
+        finalizedBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
+      };
+
+      returnValue = {
+        jsonrpc: "2.0",
+        id: 67,
+        result: {payloadStatus: {status: "VALID", latestValidHash: null, validationError: null}, payloadId: "0x"},
+      };
+
+      expect(errorResponsesBeforeSuccess).to.be.equal(2, "errorResponsesBeforeSuccess should not be 2 before request");
+      try {
+        await executionEngine.notifyForkchoiceUpdate(
+          forkChoiceHeadData.headBlockHash,
+          forkChoiceHeadData.finalizedBlockHash
+        );
+      } catch (err) {
+        expect(err).to.be.instanceOf(Error);
+      }
+      expect(errorResponsesBeforeSuccess).to.be.equal(
+        1,
+        "errorResponsesBeforeSuccess no retry should be decremented once"
+      );
+    });
+
     it("notifyForkchoiceUpdate with retry when pay load attributes", async function () {
       this.timeout("10 min");
       /**
@@ -313,7 +345,10 @@ describe("ExecutionEngine / http", () => {
         },
       };
 
-      expect(errorResponsesBeforeSuccess).to.not.be.equal(0, "errorsBeforeSuccess should not be zero before request");
+      expect(errorResponsesBeforeSuccess).to.not.be.equal(
+        0,
+        "errorResponsesBeforeSuccess should not be zero before request"
+      );
       await executionEngine.notifyForkchoiceUpdate(
         forkChoiceHeadData.headBlockHash,
         forkChoiceHeadData.finalizedBlockHash,
@@ -323,7 +358,7 @@ describe("ExecutionEngine / http", () => {
       expect(reqJsonRpcPayload).to.deep.equal(request, "Wrong request JSON RPC payload");
       expect(errorResponsesBeforeSuccess).to.be.equal(
         0,
-        "errorsBeforeSuccess should be zero after request with retries"
+        "errorResponsesBeforeSuccess should be zero after request with retries"
       );
     });
   });
@@ -339,10 +374,16 @@ describe("ExecutionEngine / http", () => {
     const response = {jsonrpc: "2.0", id: 67, error: {code: 5, message: "unknown payload"}};
     returnValue = response;
 
-    expect(errorResponsesBeforeSuccess).to.not.be.equal(0, "errorsBeforeSuccess should not be zero before request");
+    expect(errorResponsesBeforeSuccess).to.not.be.equal(
+      0,
+      "errorResponsesBeforeSuccess should not be zero before request"
+    );
     await expect(executionEngine.getPayload(request.params[0])).to.be.rejectedWith(
       "JSON RPC error: unknown payload, engine_getPayload"
     );
-    expect(errorResponsesBeforeSuccess).to.be.equal(0, "errorsBeforeSuccess should be zero after request with retries");
+    expect(errorResponsesBeforeSuccess).to.be.equal(
+      0,
+      "errorResponsesBeforeSuccess should be zero after request with retries"
+    );
   });
 });
