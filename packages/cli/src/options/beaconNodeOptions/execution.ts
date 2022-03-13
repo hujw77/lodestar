@@ -5,8 +5,8 @@ import {ICliCommandOptions, extractJwtHexSecret} from "../../util";
 export type ExecutionEngineArgs = {
   "execution.urls": string[];
   "execution.timeout": number;
-  "retry.attempts": number;
-  "retry.delay": number;
+  "execution.retryAttempts": number;
+  "execution.retryDelay": number;
   "jwt-secret"?: string;
 };
 
@@ -14,8 +14,8 @@ export function parseArgs(args: ExecutionEngineArgs): IBeaconNodeOptions["execut
   return {
     urls: args["execution.urls"],
     timeout: args["execution.timeout"],
-    retryAttempts: args["retry.attempts"],
-    retryDelay: args["retry.delay"],
+    retryAttempts: args["execution.retryAttempts"],
+    retryDelay: args["execution.retryDelay"],
     jwtSecretHex: args["jwt-secret"]
       ? extractJwtHexSecret(fs.readFileSync(args["jwt-secret"], "utf-8").trim())
       : undefined,
@@ -46,7 +46,7 @@ export const options: ICliCommandOptions<ExecutionEngineArgs> = {
     group: "execution",
   },
 
-  "retry.attempts": {
+  "executation.retryAttempts": {
     description: "Number of retry attempts when calling execution engine API",
     type: "number",
     defaultDescription:
@@ -54,7 +54,7 @@ export const options: ICliCommandOptions<ExecutionEngineArgs> = {
     group: "execution",
   },
 
-  "retry.delay": {
+  "executation.retryDelay": {
     description: "Delay time between retries when retrying calls to the execution engine API",
     type: "number",
     defaultDescription:
