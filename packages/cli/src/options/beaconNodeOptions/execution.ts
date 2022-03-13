@@ -46,7 +46,7 @@ export const options: ICliCommandOptions<ExecutionEngineArgs> = {
     group: "execution",
   },
 
-  "executation.retryAttempts": {
+  "execution.retryAttempts": {
     description: "Number of retry attempts when calling execution engine API",
     type: "number",
     defaultDescription:
@@ -54,7 +54,7 @@ export const options: ICliCommandOptions<ExecutionEngineArgs> = {
     group: "execution",
   },
 
-  "executation.retryDelay": {
+  "execution.retryDelay": {
     description: "Delay time between retries when retrying calls to the execution engine API",
     type: "number",
     defaultDescription:
