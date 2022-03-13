@@ -23,6 +23,7 @@ import {getAndInitDevValidators} from "../utils/node/validator";
 import {Eth1Provider} from "../../src";
 import {ZERO_HASH} from "../../src/constants";
 import {bytesToData, dataToBytes, quantityToNum} from "../../src/eth1/provider/utils";
+import {defaultExecutionEngineHttpOpts} from "../../lib/executionEngine/http";
 
 // NOTE: Must specify
 // EL_BINARY_DIR: File path to locate the EL executable
@@ -47,8 +48,8 @@ import {bytesToData, dataToBytes, quantityToNum} from "../../src/eth1/provider/u
 const terminalTotalDifficultyPreMerge = 10;
 const TX_SCENARIOS = process.env.TX_SCENARIOS?.split(",") || [];
 const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
-const retryAttempts = 1;
-const retryDelay = 2000;
+const retryAttempts = defaultExecutionEngineHttpOpts.retryAttempts;
+const retryDelay = defaultExecutionEngineHttpOpts.retryDelay;
 
 describe("executionEngine / ExecutionEngineHttp", function () {
   this.timeout("10min");

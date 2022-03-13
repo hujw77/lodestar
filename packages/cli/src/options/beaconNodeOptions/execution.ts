@@ -47,18 +47,18 @@ export const options: ICliCommandOptions<ExecutionEngineArgs> = {
   },
 
   "retry.attempts": {
-    description: "Number of retry attempts to execution engine API",
+    description: "Number of retry attempts when calling execution engine API",
     type: "number",
     defaultDescription:
-      defaultOptions.executionEngine.mode === "http" ? String(defaultOptions.executionEngine.retryAttempts) : "0",
+      defaultOptions.executionEngine.mode === "http" ? String(defaultOptions.executionEngine.retryAttempts) : "1",
     group: "execution",
   },
 
   "retry.delay": {
-    description: "Delay time between retries to execution engine API",
+    description: "Delay time between retries when retrying calls to the execution engine API",
     type: "number",
     defaultDescription:
-      defaultOptions.executionEngine.mode === "http" ? String(defaultOptions.executionEngine.retryDelay) : "2000",
+      defaultOptions.executionEngine.mode === "http" ? String(defaultOptions.executionEngine.retryDelay) : "0",
     group: "execution",
   },
 };

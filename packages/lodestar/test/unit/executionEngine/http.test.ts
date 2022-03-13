@@ -2,9 +2,9 @@ import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {fastify} from "fastify";
 import {AbortController} from "@chainsafe/abort-controller";
+import {fromHexString} from "@chainsafe/ssz";
 import {ExecutionEngineHttp, parseExecutionPayload, serializeExecutionPayload} from "../../../src/executionEngine/http";
 import {defaultExecutionEngineHttpOpts} from "../../../lib/executionEngine/http";
-import {fromHexString} from "@chainsafe/ssz";
 import {bytesToData, numToQuantity} from "../../../src/eth1/provider/utils";
 
 chai.use(chaiAsPromised);

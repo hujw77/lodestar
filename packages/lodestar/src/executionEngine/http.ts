@@ -233,7 +233,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         });
       },
       {
-        // We only retry the forkchoice updated when there is payload attributes
+        // We only retry the forkchoice updates when there are payload attributes
         retries: apiPayloadAttributes === undefined ? 1 : this.retryAttempts,
         retryDelay: this.retryDelay,
       }
