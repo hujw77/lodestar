@@ -23,7 +23,6 @@ import {
   PayloadAttributes,
   ApiPayloadAttributes,
 } from "./interface";
-import {retry} from "../util/retry";
 
 export type ExecutionEngineHttpOpts = {
   urls: string[];
@@ -105,29 +104,26 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   async notifyNewPayload(executionPayload: bellatrix.ExecutionPayload): Promise<ExecutePayloadResponse> {
     const method = "engine_newPayloadV1";
     const serializedExecutionPayload = serializeExecutionPayload(executionPayload);
-    const {status, latestValidHash, validationError} = await retry(
-      async (attempt) => {
-        return await this.rpc
-          .fetch<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>({
-            method,
-            params: [serializedExecutionPayload],
-          })
-          .catch(async (e: Error) => {
-            if (attempt === this.retryAttempts) {
-              if (e instanceof HttpRpcError || e instanceof ErrorJsonRpcResponse) {
-                return {status: ExecutePayloadStatus.ELERROR, latestValidHash: null, validationError: e.message};
-              } else {
-                return {status: ExecutePayloadStatus.UNAVAILABLE, latestValidHash: null, validationError: e.message};
-              }
-            }
-            throw e;
-          });
-      },
-      {
-        retries: this.retryAttempts,
-        retryDelay: this.retryDelay,
-      }
-    );
+    const {status, latestValidHash, validationError} = await this.rpc
+      .fetchWithRetries<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>(
+        {
+          method,
+          params: [serializedExecutionPayload],
+        },
+        {
+          retryAttempts: this.retryAttempts,
+          retryDelay: this.retryDelay,
+        }
+      )
+      // If there are errors by EL like connection refused, internal error, they need to be
+      // treated separate from being INVALID. For now, just pass the error upstream.
+      .catch(async (e: Error) => {
+        if (e instanceof HttpRpcError || e instanceof ErrorJsonRpcResponse) {
+          return {status: ExecutePayloadStatus.ELERROR, latestValidHash: null, validationError: e.message};
+        } else {
+          return {status: ExecutePayloadStatus.UNAVAILABLE, latestValidHash: null, validationError: e.message};
+        }
+      });
 
     switch (status) {
       case ExecutePayloadStatus.VALID:
@@ -227,20 +223,21 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     const {
       payloadStatus: {status, latestValidHash: _latestValidHash, validationError},
       payloadId,
-    } = await retry(
-      async (_attempt) => {
-        return await this.rpc.fetch<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>({
-          method,
-          params: [
-            {headBlockHash: headBlockHashData, safeBlockHash: headBlockHashData, finalizedBlockHash},
-            apiPayloadAttributes,
-          ],
-        });
+    } = await this.rpc.fetchWithRetries<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>(
+      {
+        method,
+        params: [
+          {headBlockHash: headBlockHashData, safeBlockHash: headBlockHashData, finalizedBlockHash},
+          apiPayloadAttributes,
+        ],
       },
       {
-        // We only retry the forkchoice updates when there are payload attributes
-        retries: apiPayloadAttributes === undefined ? 1 : this.retryAttempts,
+        retryAttempts: this.retryAttempts,
         retryDelay: this.retryDelay,
+        // We only retry the forkchoice updates when there are payload attributes
+        shouldRetry: (_lastError) => {
+          return apiPayloadAttributes !== undefined;
+        },
       }
     );
 
@@ -288,15 +285,16 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    */
   async getPayload(payloadId: PayloadId): Promise<bellatrix.ExecutionPayload> {
     const method = "engine_getPayloadV1";
-    const executionPayloadRpc = await retry(
-      async (_attempt) => {
-        return await this.rpc.fetch<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>({
-          method,
-          params: [payloadId],
-        });
+    const executionPayloadRpc = await this.rpc.fetchWithRetries<
+      EngineApiRpcReturnTypes[typeof method],
+      EngineApiRpcParamTypes[typeof method]
+    >(
+      {
+        method,
+        params: [payloadId],
       },
       {
-        retries: this.retryAttempts,
+        retryAttempts: this.retryAttempts,
         retryDelay: this.retryDelay,
       }
     );

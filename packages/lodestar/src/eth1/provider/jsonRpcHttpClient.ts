@@ -6,6 +6,7 @@ import {AbortController, AbortSignal} from "@chainsafe/abort-controller";
 import {ErrorAborted, TimeoutError} from "@chainsafe/lodestar-utils";
 import {IJson, IRpcPayload, ReqOpts} from "../interface";
 import {encodeJwtToken} from "./jwt";
+import {retry} from "../../util/retry";
 /**
  * Limits the amount of response text printed with RPC or parsing errors
  */
@@ -27,6 +28,7 @@ interface IRpcResponseError {
 
 export interface IJsonRpcHttpClient {
   fetch<R, P = IJson[]>(payload: IRpcPayload<P>, opts?: ReqOpts): Promise<R>;
+  fetchWithRetries<R, P = IJson[]>(payload: IRpcPayload<P>, opts?: ReqOpts): Promise<R>;
   fetchBatch<R>(rpcPayloadArr: IRpcPayload[], opts?: ReqOpts): Promise<R[]>;
 }
 
@@ -72,6 +74,23 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
    */
   async fetch<R, P = IJson[]>(payload: IRpcPayload<P>, opts?: ReqOpts): Promise<R> {
     const res: IRpcResponse<R> = await this.fetchJson({jsonrpc: "2.0", id: this.id++, ...payload}, opts);
+    return parseRpcResponse(res, payload);
+  }
+
+  /**
+   * Perform RPC request with retry
+   */
+  async fetchWithRetries<R, P = IJson[]>(payload: IRpcPayload<P>, opts?: ReqOpts): Promise<R> {
+    const res: IRpcResponse<R> = await retry(
+      async (_attempt) => {
+        return await this.fetchJson({jsonrpc: "2.0", id: this.id++, ...payload}, opts);
+      },
+      {
+        retries: opts?.retryAttempts ?? 1,
+        retryDelay: opts?.retryDelay ?? 0,
+        shouldRetry: opts?.shouldRetry,
+      }
+    );
     return parseRpcResponse(res, payload);
   }
 

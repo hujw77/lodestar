@@ -91,4 +91,7 @@ export interface IRpcPayload<P = IJson[]> {
 
 export type ReqOpts = {
   timeout?: number;
+  retryAttempts?: number;
+  retryDelay?: number;
+  shouldRetry?: (lastError: Error) => boolean;
 };
