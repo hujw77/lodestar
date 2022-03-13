@@ -39,13 +39,6 @@ export const options: ICliCommandOptions<ExecutionEngineArgs> = {
     group: "execution",
   },
 
-  "jwt-secret": {
-    description:
-      "File path to a shared hex-encoded jwt secret which will be used to generate and bundle HS256 encoded jwt tokens for authentication with the EL client's rpc server hosting engine apis. Secret to be exactly same as the one used by the corresponding EL client.",
-    type: "string",
-    group: "execution",
-  },
-
   "execution.retryAttempts": {
     description: "Number of retry attempts when calling execution engine API",
     type: "number",
@@ -59,6 +52,13 @@ export const options: ICliCommandOptions<ExecutionEngineArgs> = {
     type: "number",
     defaultDescription:
       defaultOptions.executionEngine.mode === "http" ? String(defaultOptions.executionEngine.retryDelay) : "0",
+    group: "execution",
+  },
+
+  "jwt-secret": {
+    description:
+      "File path to a shared hex-encoded jwt secret which will be used to generate and bundle HS256 encoded jwt tokens for authentication with the EL client's rpc server hosting engine apis. Secret to be exactly same as the one used by the corresponding EL client.",
+    type: "string",
     group: "execution",
   },
 };
