@@ -6,7 +6,7 @@ export type ExecutionEngineArgs = {
   "execution.urls": string[];
   "execution.timeout": number;
   "retry.attempts": number;
-  "retry.pause": number;
+  "retry.delay": number;
   "jwt-secret"?: string;
 };
 
@@ -15,7 +15,7 @@ export function parseArgs(args: ExecutionEngineArgs): IBeaconNodeOptions["execut
     urls: args["execution.urls"],
     timeout: args["execution.timeout"],
     retryAttempts: args["retry.attempts"],
-    retryDelay: args["retry.pause"],
+    retryDelay: args["retry.delay"],
     jwtSecretHex: args["jwt-secret"]
       ? extractJwtHexSecret(fs.readFileSync(args["jwt-secret"], "utf-8").trim())
       : undefined,
@@ -54,7 +54,7 @@ export const options: ICliCommandOptions<ExecutionEngineArgs> = {
     group: "execution",
   },
 
-  "retry.pause": {
+  "retry.delay": {
     description: "Delay time between retries to execution engine API",
     type: "number",
     defaultDescription:
