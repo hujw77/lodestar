@@ -30,8 +30,8 @@ describe("options / beaconNodeOptions", () => {
 
       "execution.urls": ["http://localhost:8550"],
       "execution.timeout": 12000,
-      "retry.delay": 2000,
-      "retry.attempts": 1,
+      "execution.retryDelay": 2000,
+      "execution.retryAttempts": 1,
 
       "logger.eth1.level": "debug",
       "logger.unknown.level": "debug",
