@@ -117,7 +117,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       )
       // If there are errors by EL like connection refused, internal error, they need to be
       // treated separate from being INVALID. For now, just pass the error upstream.
-      .catch(async (e: Error) => {
+      .catch((e: Error): EngineApiRpcReturnTypes[typeof method] => {
         if (e instanceof HttpRpcError || e instanceof ErrorJsonRpcResponse) {
           return {status: ExecutePayloadStatus.ELERROR, latestValidHash: null, validationError: e.message};
         } else {
