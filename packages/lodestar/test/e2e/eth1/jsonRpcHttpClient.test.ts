@@ -170,6 +170,50 @@ describe("eth1 / jsonRpcHttpClient - with retries", async function () {
     }
   });
 
+  it("should retry ENOTFOUND", async function () {
+    let retryCount = 0;
+
+    const url = "https://goerli.fake-website.io";
+    const payload = {method: "get", params: []};
+    const retryAttempts = 2;
+
+    const controller = new AbortController();
+    const eth1JsonRpcClient = new JsonRpcHttpClient([url], {signal: controller.signal});
+    await expect(
+      eth1JsonRpcClient.fetchWithRetries(payload, {
+        retryAttempts,
+        shouldRetry: () => {
+          // using the shouldRetry function to keep tab of the retried requests
+          retryCount++;
+          return true;
+        },
+      })
+    ).to.be.rejectedWith("getaddrinfo ENOTFOUND");
+    expect(retryCount).to.be.equal(retryAttempts, "ENOTFOUND should be retried before failing");
+  });
+
+  it("should retry ECONNREFUSED", async function () {
+    let retryCount = 0;
+
+    const url = `http://localhost:${port + 1}`;
+    const payload = {method: "get", params: []};
+    const retryAttempts = 2;
+
+    const controller = new AbortController();
+    const eth1JsonRpcClient = new JsonRpcHttpClient([url], {signal: controller.signal});
+    await expect(
+      eth1JsonRpcClient.fetchWithRetries(payload, {
+        retryAttempts,
+        shouldRetry: () => {
+          // using the shouldRetry function to keep tab of the retried requests
+          retryCount++;
+          return true;
+        },
+      })
+    ).to.be.rejectedWith("connect ECONNREFUSED");
+    expect(retryCount).to.be.equal(retryAttempts, "connect ECONNREFUSED should be retried before failing");
+  });
+
   it("should retry 404", async function () {
     let retryCount = 0;
 
