@@ -83,7 +83,9 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
   async fetchWithRetries<R, P = IJson[]>(payload: IRpcPayload<P>, opts?: ReqOpts): Promise<R> {
     const res: IRpcResponse<R> = await retry(
       async (_attempt) => {
-        return await this.fetchJson({jsonrpc: "2.0", id: this.id++, ...payload}, opts);
+        const result: IRpcResponse<R> = await this.fetchJson({jsonrpc: "2.0", id: this.id++, ...payload}, opts);
+        opts?.onEachRetryFn?.();
+        return result;
       },
       {
         retries: opts?.retryAttempts ?? 1,

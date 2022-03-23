@@ -12,8 +12,12 @@ import {createLodestarMetrics, ILodestarMetrics} from "./metrics/lodestar";
 import {IMetricsOptions} from "./options";
 import {RegistryMetricCreator} from "./utils/registryMetricCreator";
 import {createValidatorMonitor, IValidatorMonitor} from "./validatorMonitor";
+import {createExecutionEngineMetrics, IExecutionEngineMetrics} from "./metrics/executionEngine";
 
-export type IMetrics = IBeaconMetrics & ILodestarMetrics & IValidatorMonitor & {register: Registry};
+export type IMetrics = IBeaconMetrics &
+  ILodestarMetrics &
+  IValidatorMonitor &
+  IExecutionEngineMetrics & {register: Registry};
 
 export function createMetrics(
   opts: IMetricsOptions,
@@ -24,6 +28,7 @@ export function createMetrics(
   const register = new RegistryMetricCreator();
   const beacon = createBeaconMetrics(register);
   const lodestar = createLodestarMetrics(register, opts.metadata, anchorState);
+  const executionEngine = createExecutionEngineMetrics(register);
 
   const genesisTime = anchorState.genesisTime;
   const validatorMonitor = createValidatorMonitor(lodestar, config, genesisTime);
@@ -48,7 +53,13 @@ export function createMetrics(
   // - nodejs_gc_reclaimed_bytes_total: The number of bytes GC has freed
   gcStats(register)();
 
-  return {...beacon, ...lodestar, ...validatorMonitor, register: Registry.merge([register, ...registries])};
+  return {
+    ...beacon,
+    ...lodestar,
+    ...validatorMonitor,
+    ...executionEngine,
+    register: Registry.merge([register, ...registries]),
+  };
 }
 
 export function createDbMetrics(): {metrics: IDbMetrics; registry: Registry} {
