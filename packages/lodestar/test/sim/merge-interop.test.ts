@@ -159,7 +159,8 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     }
 
     const controller = new AbortController();
-    const executionEngine = new ExecutionEngineHttp({metrics: null},
+    const executionEngine = new ExecutionEngineHttp(
+      {metrics: null},
       {urls: [engineApiUrl], jwtSecretHex, retryAttempts, retryDelay},
       controller.signal
     );
