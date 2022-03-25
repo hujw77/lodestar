@@ -5,15 +5,23 @@ export type IExecutionEngineMetrics = ReturnType<typeof createExecutionEngineMet
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
 export function createExecutionEngineMetrics(register: RegistryMetricCreator) {
   return {
-    executionEngineRequest: register.histogram<"method">({
-      name: "execution_engine_request_seconds",
-      help: "Requests to the execution layer",
-      labelNames: ["method"],
-    }),
-    executionEngineRequestCount: register.gauge<"method">({
-      name: "execution_engine_request_count",
-      help: "Requests count to the execution layer",
-      labelNames: ["method"],
-    }),
+    executionEngine: {
+      responseTime: register.histogram<"method">({
+        name: "execution_engine_response_time_seconds",
+        help: "Total response time (including retries) for execution engine requests in seconds",
+        labelNames: ["method"],
+        buckets: [0.1, 1, 10, 100],
+      }),
+      retryCount: register.gauge<"method">({
+        name: "execution_engine_retry_count",
+        help: "Count of retries to the execution engine",
+        labelNames: ["method"],
+      }),
+      errorCount: register.gauge<"method">({
+        name: "execution_engine_error_count",
+        help: "Count of api requests that finally failed",
+        labelNames: ["method"],
+      }),
+    },
   };
 }

@@ -7,6 +7,20 @@ import {ErrorAborted, TimeoutError} from "@chainsafe/lodestar-utils";
 import {IJson, IRpcPayload, ReqOpts} from "../interface";
 import {encodeJwtToken} from "./jwt";
 import {retry} from "../../util/retry";
+
+interface IHistogram {
+  startTimer(_arg1: {method: string}): () => void;
+}
+interface IGauge {
+  inc(_arg1: {method: string}, value?: number): void;
+}
+
+export interface IJsonRPCMetrics {
+  responseTime: IHistogram;
+  retryCount: IGauge;
+  errorCount: IGauge;
+}
+
 /**
  * Limits the amount of response text printed with RPC or parsing errors
  */
@@ -34,13 +48,6 @@ export interface IJsonRpcHttpClient {
 
 export class JsonRpcHttpClient implements IJsonRpcHttpClient {
   private id = 1;
-  /**
-   * Optional: If provided, use this jwt secret to HS256 encode and add a jwt token in the
-   * request header which can be authenticated by the RPC server to provide access.
-   * A fresh token is generated on each requests as EL spec mandates the ELs to check
-   * the token freshness +-5 seconds (via `iat` property of the token claim)
-   */
-  private jwtSecret?: Uint8Array;
 
   constructor(
     private readonly urls: string[],
@@ -50,11 +57,21 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
       /** If returns true, do not fallback to other urls and throw early */
       shouldNotFallback?: (error: Error) => boolean;
       /**
-       * If provided, the requests to the RPC server will be bundled with a HS256 encoded
-       * token using this secret. Otherwise the requests to the RPC server will be unauthorized
+       * Optional: If provided, use this jwt secret to HS256 encode and add a jwt token in the
+       * request header which can be authenticated by the RPC server to provide access.
+       * A fresh token is generated on each requests as EL spec mandates the ELs to check
+       * the token freshness +-5 seconds (via `iat` property of the token claim)
+       *
+       * Otherwise the requests to the RPC server will be unauthorized
        * and it might deny responses to the RPC requests.
        */
       jwtSecret?: Uint8Array;
+      /** Retry attempts */
+      retryAttempts?: number;
+      /** Retry delay, only relevant with retry attempts */
+      retryDelay?: number;
+      /** Metrics for retry, could be expanded later */
+      metrics?: IJsonRPCMetrics | null;
     }
   ) {
     // Sanity check for all URLs to be properly defined. Otherwise it will error in loop on fetch
@@ -66,7 +83,6 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
         throw Error(`JsonRpcHttpClient.urls[${i}] is empty or undefined: ${url}`);
       }
     }
-    this.jwtSecret = opts?.jwtSecret;
   }
 
   /**
@@ -81,19 +97,30 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
    * Perform RPC request with retry
    */
   async fetchWithRetries<R, P = IJson[]>(payload: IRpcPayload<P>, opts?: ReqOpts): Promise<R> {
-    const res: IRpcResponse<R> = await retry(
-      async (_attempt) => {
-        const result: IRpcResponse<R> = await this.fetchJson({jsonrpc: "2.0", id: this.id++, ...payload}, opts);
-        opts?.onEachRetryFn?.();
-        return result;
-      },
-      {
-        retries: opts?.retryAttempts ?? 1,
-        retryDelay: opts?.retryDelay ?? 0,
-        shouldRetry: opts?.shouldRetry,
-      }
-    );
-    return parseRpcResponse(res, payload);
+    const timer = this.opts?.metrics?.responseTime.startTimer({method: payload.method});
+    try {
+      const res = await retry(
+        async (attempt) => {
+          /** If this is a retry, increment the retry counter for this method */
+          if (attempt > 0) {
+            this.opts?.metrics?.retryCount.inc({method: payload.method});
+          }
+          const result: IRpcResponse<R> = await this.fetchJson({jsonrpc: "2.0", id: this.id++, ...payload}, opts);
+          return result;
+        },
+        {
+          retries: opts?.retryAttempts ?? this.opts?.retryAttempts ?? 1,
+          retryDelay: opts?.retryDelay ?? this.opts?.retryAttempts ?? 0,
+          shouldRetry: opts?.shouldRetry,
+        }
+      );
+      return parseRpcResponse(res, payload);
+    } catch (e) {
+      this.opts?.metrics?.errorCount.inc({method: payload.method});
+      throw e;
+    } finally {
+      timer?.();
+    }
   }
 
   /**
@@ -158,7 +185,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
 
     try {
       const headers: Record<string, string> = {"Content-Type": "application/json"};
-      if (this.jwtSecret) {
+      if (this.opts?.jwtSecret) {
         /**
          * ELs have a tight +-5 second freshness check on token's iat i.e. issued at
          * so its better to generate a new token each time. Currently iat is the only claim
@@ -167,7 +194,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
          *
          * Jwt auth spec: https://github.com/ethereum/execution-apis/pull/167
          */
-        const token = encodeJwtToken({iat: Math.floor(new Date().getTime() / 1000)}, this.jwtSecret);
+        const token = encodeJwtToken({iat: Math.floor(new Date().getTime() / 1000)}, this.opts.jwtSecret);
         headers["Authorization"] = `Bearer ${token}`;
       }
 

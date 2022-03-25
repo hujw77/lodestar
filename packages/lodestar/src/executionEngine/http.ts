@@ -25,8 +25,10 @@ import {
 } from "./interface";
 import {IMetrics} from "../metrics";
 
-type ExecutionEngineModule = {
-  metrics: IMetrics | null;
+export type ExecutionEngineModules = {
+  signal: AbortSignal;
+  rpc?: IJsonRpcHttpClient;
+  metrics?: IMetrics | null;
 };
 
 export type ExecutionEngineHttpOpts = {
@@ -66,26 +68,17 @@ export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
  */
 export class ExecutionEngineHttp implements IExecutionEngine {
   private readonly rpc: IJsonRpcHttpClient;
-  private readonly retryAttempts: number;
-  private readonly retryDelay: number;
-  private readonly metrics: IMetrics | null;
+  private readonly metrics?: IMetrics | null;
 
-  constructor(
-    module: ExecutionEngineModule,
-    opts: ExecutionEngineHttpOpts,
-    signal: AbortSignal,
-    rpc?: IJsonRpcHttpClient
-  ) {
-    this.metrics = module.metrics;
+  constructor(opts: ExecutionEngineHttpOpts, {metrics, rpc, signal}: ExecutionEngineModules) {
     this.rpc =
       rpc ??
       new JsonRpcHttpClient(opts.urls, {
+        ...opts,
         signal,
-        timeout: opts.timeout,
+        metrics: metrics?.executionEngine,
         jwtSecret: opts.jwtSecretHex ? fromHex(opts.jwtSecretHex) : undefined,
       });
-    this.retryAttempts = opts.retryAttempts;
-    this.retryDelay = opts.retryDelay;
   }
 
   /**
@@ -116,21 +109,11 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   async notifyNewPayload(executionPayload: bellatrix.ExecutionPayload): Promise<ExecutePayloadResponse> {
     const method = "engine_newPayloadV1";
     const serializedExecutionPayload = serializeExecutionPayload(executionPayload);
-    const timer = this.metrics?.executionEngineRequest.startTimer({method});
     const {status, latestValidHash, validationError} = await this.rpc
-      .fetchWithRetries<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>(
-        {
-          method,
-          params: [serializedExecutionPayload],
-        },
-        {
-          retryAttempts: this.retryAttempts,
-          retryDelay: this.retryDelay,
-          onEachRetryFn: () => {
-            this?.metrics?.executionEngineRequestCount.inc({method});
-          },
-        }
-      )
+      .fetchWithRetries<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>({
+        method,
+        params: [serializedExecutionPayload],
+      })
       // If there are errors by EL like connection refused, internal error, they need to be
       // treated separate from being INVALID. For now, just pass the error upstream.
       .catch((e: Error): EngineApiRpcReturnTypes[typeof method] => {
@@ -140,8 +123,6 @@ export class ExecutionEngineHttp implements IExecutionEngine {
           return {status: ExecutePayloadStatus.UNAVAILABLE, latestValidHash: null, validationError: e.message};
         }
       });
-
-    timer?.();
 
     switch (status) {
       case ExecutePayloadStatus.VALID:
@@ -238,7 +219,6 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
     // TODO: propogate latestValidHash to the forkchoice, for now ignore it as we
     // currently do not propogate the validation status up the forkchoice
-    const timer = this.metrics?.executionEngineRequest.startTimer({method});
     const {
       payloadStatus: {status, latestValidHash: _latestValidHash, validationError},
       payloadId,
@@ -251,19 +231,12 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         ],
       },
       {
-        retryAttempts: this.retryAttempts,
-        retryDelay: this.retryDelay,
         // We only retry the forkchoice updates when there are payload attributes
         shouldRetry: (_lastError) => {
           return apiPayloadAttributes !== undefined;
         },
-        onEachRetryFn: () => {
-          this?.metrics?.executionEngineRequestCount.inc({method});
-        },
       }
     );
-
-    timer?.();
 
     switch (status) {
       case ExecutePayloadStatus.VALID:
@@ -309,24 +282,13 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    */
   async getPayload(payloadId: PayloadId): Promise<bellatrix.ExecutionPayload> {
     const method = "engine_getPayloadV1";
-    const timer = this.metrics?.executionEngineRequest.startTimer({method});
     const executionPayloadRpc = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
-    >(
-      {
-        method,
-        params: [payloadId],
-      },
-      {
-        retryAttempts: this.retryAttempts,
-        retryDelay: this.retryDelay,
-        onEachRetryFn: () => {
-          this?.metrics?.executionEngineRequestCount.inc({method});
-        },
-      }
-    );
-    timer?.();
+    >({
+      method,
+      params: [payloadId],
+    });
     return parseExecutionPayload(executionPayloadRpc);
   }
 }

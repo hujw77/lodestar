@@ -94,5 +94,4 @@ export type ReqOpts = {
   retryAttempts?: number;
   retryDelay?: number;
   shouldRetry?: (lastError: Error) => boolean;
-  onEachRetryFn?: () => void;
 };

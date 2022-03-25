@@ -38,13 +38,12 @@ describe("ExecutionEngine / http", () => {
     const baseUrl = await server.listen(0);
 
     executionEngine = new ExecutionEngineHttp(
-      {metrics: null},
       {
         urls: [baseUrl],
         retryAttempts: defaultExecutionEngineHttpOpts.retryAttempts,
         retryDelay: defaultExecutionEngineHttpOpts.retryDelay,
       },
-      controller.signal
+      {signal: controller.signal}
     );
   });
 

@@ -144,7 +144,7 @@ export class BeaconNode {
         {config, db, logger: logger.child(opts.logger.eth1), signal},
         anchorState
       ),
-      executionEngine: initializeExecutionEngine(metrics, opts.executionEngine, signal),
+      executionEngine: initializeExecutionEngine(opts.executionEngine, {metrics, signal}),
     });
 
     // Load persisted data from disk to in-memory caches
