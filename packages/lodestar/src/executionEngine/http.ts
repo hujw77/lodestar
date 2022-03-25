@@ -68,7 +68,6 @@ export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
  */
 export class ExecutionEngineHttp implements IExecutionEngine {
   private readonly rpc: IJsonRpcHttpClient;
-  private readonly metrics?: IMetrics | null;
 
   constructor(opts: ExecutionEngineHttpOpts, {metrics, rpc, signal}: ExecutionEngineModules) {
     this.rpc =
