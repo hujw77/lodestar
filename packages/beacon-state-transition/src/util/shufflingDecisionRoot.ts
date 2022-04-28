@@ -24,7 +24,7 @@ export function proposerShufflingDecisionRoot(state: CachedBeaconStateAllForks):
  * can be used to key the proposer shuffling for the current epoch.
  */
 function proposerShufflingDecisionSlot(state: CachedBeaconStateAllForks): Slot {
-  const startSlot = computeStartSlotAtEpoch(state.currentShuffling.epoch);
+  const startSlot = computeStartSlotAtEpoch(state.epochCtx.epoch);
   return Math.max(startSlot - 1, 0);
 }
 
@@ -57,22 +57,21 @@ function attesterShufflingDecisionSlot(state: CachedBeaconStateAllForks, request
 /**
  * Returns the epoch at which the attester shuffling was decided.
  *
- * Spec ref: https://github.com/ethereum/eth2.0-APIs/blob/46d2b82127cb1ffce51bbc748a7df2677fc0215a/apis/validator/duties/attester.yaml#L15
+ * Spec ref: https://github.com/ethereum/beacon-APIs/blob/v2.1.0/apis/validator/duties/attester.yaml#L15
  *
  * Throws an error when:
  * - `EpochTooLow` when `requestedEpoch` is more than 1 prior to `currentEpoch`.
  * - `EpochTooHigh` when `requestedEpoch` is more than 1 after `currentEpoch`.
  */
 function attesterShufflingDecisionEpoch(state: CachedBeaconStateAllForks, requestedEpoch: Epoch): Epoch {
-  const currentEpoch = state.currentShuffling.epoch;
-  const previouEpoch = state.previousShuffling.epoch;
+  const currentEpoch = state.epochCtx.epoch;
 
   // Next
   if (requestedEpoch === currentEpoch + 1) return currentEpoch;
   // Current
-  if (requestedEpoch === currentEpoch) return previouEpoch;
+  if (requestedEpoch === currentEpoch) return Math.max(currentEpoch - 1, 0);
   // Previous
-  if (requestedEpoch === currentEpoch - 1) return Math.max(previouEpoch - 1, 0);
+  if (requestedEpoch === currentEpoch - 1) return Math.max(currentEpoch - 2, 0);
 
   if (requestedEpoch < currentEpoch) {
     throw Error(`EpochTooLow: current ${currentEpoch} requested ${requestedEpoch}`);

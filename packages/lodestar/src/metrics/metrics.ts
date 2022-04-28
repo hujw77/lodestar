@@ -1,15 +1,15 @@
 /**
  * @module metrics
  */
-import {getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {ILogger} from "@chainsafe/lodestar-utils";
+import {BeaconStateAllForks, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {allForks} from "@chainsafe/lodestar-types";
-import {collectDefaultMetrics, Counter, Registry} from "prom-client";
+import {collectDefaultMetrics, Counter, Metric, Registry} from "prom-client";
 import gcStats from "prometheus-gc-stats";
 import {DbMetricLabels, IDbMetrics} from "@chainsafe/lodestar-db";
 import {createBeaconMetrics, IBeaconMetrics} from "./metrics/beacon";
 import {createLodestarMetrics, ILodestarMetrics} from "./metrics/lodestar";
-import {IMetricsOptions} from "./options";
+import {MetricsOptions} from "./options";
 import {RegistryMetricCreator} from "./utils/registryMetricCreator";
 import {createValidatorMonitor, IValidatorMonitor} from "./validatorMonitor";
 import {createExecutionEngineMetrics, IExecutionEngineMetrics} from "./metrics/executionEngine";
@@ -17,13 +17,14 @@ import {createExecutionEngineMetrics, IExecutionEngineMetrics} from "./metrics/e
 export type IMetrics = IBeaconMetrics &
   ILodestarMetrics &
   IValidatorMonitor &
-  IExecutionEngineMetrics & {register: Registry};
+  IExecutionEngineMetrics & {register: RegistryMetricCreator};
 
 export function createMetrics(
-  opts: IMetricsOptions,
+  opts: MetricsOptions,
   config: IChainForkConfig,
-  anchorState: allForks.BeaconState,
-  registries: Registry[] = []
+  anchorState: BeaconStateAllForks,
+  logger: ILogger,
+  externalRegistries: Registry[] = []
 ): IMetrics {
   const register = new RegistryMetricCreator();
   const beacon = createBeaconMetrics(register);
@@ -31,7 +32,7 @@ export function createMetrics(
   const executionEngine = createExecutionEngineMetrics(register);
 
   const genesisTime = anchorState.genesisTime;
-  const validatorMonitor = createValidatorMonitor(lodestar, config, genesisTime);
+  const validatorMonitor = createValidatorMonitor(lodestar, config, genesisTime, logger);
   // Register a single collect() function to run all validatorMonitor metrics
   lodestar.validatorMonitor.validatorsTotal.addCollect(() => {
     const clockSlot = getCurrentSlot(config, genesisTime);
@@ -41,6 +42,29 @@ export function createMetrics(
     lodestar.unhandeledPromiseRejections.inc();
   });
 
+  collectNodeJSMetrics(register);
+
+  // Merge external registries
+  for (const externalRegister of externalRegistries) {
+    // Wrong types, does not return a promise
+    const metrics = (externalRegister.getMetricsAsArray() as unknown) as Resolves<
+      typeof externalRegister.getMetricsAsArray
+    >;
+    for (const metric of metrics) {
+      register.registerMetric((metric as unknown) as Metric<string>);
+    }
+  }
+
+  return {
+    ...beacon,
+    ...lodestar,
+    ...validatorMonitor,
+    ...executionEngine,
+    register,
+  };
+}
+
+export function collectNodeJSMetrics(register: Registry): void {
   collectDefaultMetrics({
     register,
     // eventLoopMonitoringPrecision with sampling rate in milliseconds
@@ -52,14 +76,6 @@ export function createMetrics(
   // - nodejs_gc_pause_seconds_total: Time spent in GC in seconds
   // - nodejs_gc_reclaimed_bytes_total: The number of bytes GC has freed
   gcStats(register)();
-
-  return {
-    ...beacon,
-    ...lodestar,
-    ...validatorMonitor,
-    ...executionEngine,
-    register: Registry.merge([register, ...registries]),
-  };
 }
 
 export function createDbMetrics(): {metrics: IDbMetrics; registry: Registry} {
@@ -80,3 +96,6 @@ export function createDbMetrics(): {metrics: IDbMetrics; registry: Registry} {
   registry.registerMetric(metrics.dbWrites);
   return {metrics, registry};
 }
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Resolves<F extends (...args: any[]) => Promise<any>> = F extends (...args: any[]) => Promise<infer T> ? T : never;

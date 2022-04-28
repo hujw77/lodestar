@@ -21,7 +21,7 @@ export enum Version {
 
 /**
  * Available request/response encoding strategies:
- * https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#encoding-strategies
+ * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#encoding-strategies
  */
 export enum Encoding {
   SSZ_SNAPPY = "ssz_snappy",
@@ -52,16 +52,6 @@ export const isSingleResponseChunkByMethod: {[K in Method]: boolean} = {
   [Method.Metadata]: true,
   [Method.BeaconBlocksByRange]: false, // A stream, 0 or more response chunks
   [Method.BeaconBlocksByRoot]: false,
-};
-
-/** Deserialize some types to TreeBacked directly for more efficient hashing */
-export const deserializeToTreeByMethod: {[K in Method]: boolean} = {
-  [Method.Status]: false,
-  [Method.Goodbye]: false,
-  [Method.Ping]: false,
-  [Method.Metadata]: false,
-  [Method.BeaconBlocksByRange]: true,
-  [Method.BeaconBlocksByRoot]: true,
 };
 
 export const CONTEXT_BYTES_FORK_DIGEST_LENGTH = 4;

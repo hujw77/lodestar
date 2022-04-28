@@ -1,4 +1,4 @@
-import {isTreeBacked, readonlyValues, toHexString, TreeBacked} from "@chainsafe/ssz";
+import {toHexString} from "@chainsafe/ssz";
 import {SAFE_SLOTS_TO_UPDATE_JUSTIFIED, SLOTS_PER_HISTORICAL_ROOT, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {Slot, ValidatorIndex, phase0, allForks, ssz, RootHex, Epoch, Root} from "@chainsafe/lodestar-types";
 import {
@@ -9,6 +9,7 @@ import {
   ZERO_HASH,
   bellatrix,
   EffectiveBalanceIncrements,
+  BeaconStateAllForks,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IChainConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 
@@ -24,9 +25,9 @@ import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex} from "./store"
 /* eslint-disable max-len */
 
 /**
- * Provides an implementation of "Ethereum 2.0 Phase 0 -- Beacon Chain Fork Choice":
+ * Provides an implementation of "Ethereum Consensus -- Beacon Chain Fork Choice":
  *
- * https://github.com/ethereum/eth2.0-specs/blob/v0.12.2/specs/phase0/fork-choice.md#ethereum-20-phase-0----beacon-chain-fork-choice
+ * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#fork-choice
  *
  * ## Detail
  *
@@ -108,7 +109,7 @@ export class ForkChoice implements IForkChoice {
    *
    * Equivalent to:
    *
-   * https://github.com/ethereum/eth2.0-specs/blob/v0.12.1/specs/phase0/fork-choice.md#get_ancestor
+   * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#get_ancestor
    */
   getAncestor(blockRoot: RootHex, ancestorSlot: Slot): RootHex {
     const block = this.protoArray.getBlock(blockRoot);
@@ -169,7 +170,7 @@ export class ForkChoice implements IForkChoice {
    *
    * Is equivalent to:
    *
-   * https://github.com/ethereum/eth2.0-specs/blob/v0.12.2/specs/phase0/fork-choice.md#get_head
+   * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#get_head
    */
   updateHead(): IProtoBlock {
     // balances is not changed but votes are changed
@@ -258,7 +259,7 @@ export class ForkChoice implements IForkChoice {
    *
    * Approximates:
    *
-   * https://github.com/ethereum/eth2.0-specs/blob/v0.12.1/specs/phase0/fork-choice.md#on_block
+   * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#on_block
    *
    * It only approximates the specification since it does not run the `state_transition` check.
    * That should have already been called upstream and it's too expensive to call again.
@@ -270,7 +271,7 @@ export class ForkChoice implements IForkChoice {
    * `justifiedBalances` balances of justified state which is updated synchronously.
    * This ensures that the forkchoice is never out of sync.
    */
-  onBlock(block: allForks.BeaconBlock, state: allForks.BeaconState, preCachedData?: OnBlockPrecachedData): void {
+  onBlock(block: allForks.BeaconBlock, state: BeaconStateAllForks, preCachedData?: OnBlockPrecachedData): void {
     const {parentRoot, slot} = block;
     const parentRootHex = toHexString(parentRoot);
     // Parent block must be known
@@ -388,7 +389,7 @@ export class ForkChoice implements IForkChoice {
         throw Error("Missing blockDelaySec info for proposerBoost");
       }
 
-      const proposerInterval = getCurrentInterval(this.config, state.genesisTime, blockDelaySec);
+      const proposerInterval = getCurrentInterval(this.config, blockDelaySec);
       if (proposerInterval < 1) {
         this.proposerBoostRoot = blockRootHex;
         this.synced = false;
@@ -396,7 +397,7 @@ export class ForkChoice implements IForkChoice {
     }
 
     const targetSlot = computeStartSlotAtEpoch(computeEpochAtSlot(slot));
-    const targetRoot = slot === targetSlot ? blockRoot : state.blockRoots[targetSlot % SLOTS_PER_HISTORICAL_ROOT];
+    const targetRoot = slot === targetSlot ? blockRoot : state.blockRoots.get(targetSlot % SLOTS_PER_HISTORICAL_ROOT);
 
     // This does not apply a vote to the block, it just makes fork choice aware of the block so
     // it can still be identified as the head even if it doesn't have any votes.
@@ -430,7 +431,7 @@ export class ForkChoice implements IForkChoice {
    *
    * Approximates:
    *
-   * https://github.com/ethereum/eth2.0-specs/blob/v0.12.1/specs/phase0/fork-choice.md#on_attestation
+   * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#on_attestation
    *
    * It only approximates the specification since it does not perform
    * `is_valid_indexed_attestation` since that should already have been called upstream and it's
@@ -466,7 +467,7 @@ export class ForkChoice implements IForkChoice {
     this.validateOnAttestation(attestation, slot, blockRootHex, targetEpoch);
 
     if (slot < this.fcStore.currentSlot) {
-      for (const validatorIndex of readonlyValues(attestation.attestingIndices)) {
+      for (const validatorIndex of attestation.attestingIndices) {
         this.addLatestMessage(validatorIndex, targetEpoch, blockRootHex);
       }
     } else {
@@ -478,7 +479,7 @@ export class ForkChoice implements IForkChoice {
       // ```
       this.queuedAttestations.add({
         slot: slot,
-        attestingIndices: Array.from(readonlyValues(attestation.attestingIndices)),
+        attestingIndices: attestation.attestingIndices,
         blockRoot: blockRootHex,
         targetEpoch,
       });
@@ -731,9 +732,9 @@ export class ForkChoice implements IForkChoice {
    *
    * Is equivalent to:
    *
-   * https://github.com/ethereum/eth2.0-specs/blob/v0.12.1/specs/phase0/fork-choice.md#should_update_justified_checkpoint
+   * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#should_update_justified_checkpoint
    */
-  private shouldUpdateJustifiedCheckpoint(state: allForks.BeaconState): boolean {
+  private shouldUpdateJustifiedCheckpoint(state: BeaconStateAllForks): boolean {
     const {slot, currentJustifiedCheckpoint} = state;
     const newJustifiedCheckpoint = currentJustifiedCheckpoint;
 
@@ -780,7 +781,7 @@ export class ForkChoice implements IForkChoice {
    *
    * Equivalent to:
    *
-   * https://github.com/ethereum/eth2.0-specs/blob/v0.12.1/specs/phase0/fork-choice.md#validate_on_attestation
+   * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#validate_on_attestation
    */
   private validateOnAttestation(
     indexedAttestation: phase0.IndexedAttestation,
@@ -803,24 +804,20 @@ export class ForkChoice implements IForkChoice {
     }
 
     const attestationData = indexedAttestation.data;
-    // Only cache attestation data root hex if it's tree backed since it's available.
-    if (
-      isTreeBacked(attestationData) &&
-      this.validatedAttestationDatas.has(
-        toHexString(((attestationData as unknown) as TreeBacked<phase0.AttestationData>).tree.root)
-      )
-    ) {
-      return;
-    }
+    // AttestationData is expected to internally cache its root to make this hashTreeRoot() call free
+    const attestationCacheKey = toHexString(ssz.phase0.AttestationData.hashTreeRoot(attestationData));
 
-    this.validateAttestationData(indexedAttestation.data, slot, blockRootHex, targetEpoch);
+    if (!this.validatedAttestationDatas.has(attestationCacheKey)) {
+      this.validateAttestationData(indexedAttestation.data, slot, blockRootHex, targetEpoch, attestationCacheKey);
+    }
   }
 
   private validateAttestationData(
     attestationData: phase0.AttestationData,
     slot: Slot,
     beaconBlockRootHex: string,
-    targetEpoch: Epoch
+    targetEpoch: Epoch,
+    attestationCacheKey: string
   ): void {
     const epochNow = computeEpochAtSlot(this.fcStore.currentSlot);
     const targetRootHex = toHexString(attestationData.target.root);
@@ -920,12 +917,7 @@ export class ForkChoice implements IForkChoice {
       });
     }
 
-    // Only cache attestation data root hex if it's tree backed since it's available.
-    if (isTreeBacked(attestationData)) {
-      this.validatedAttestationDatas.add(
-        toHexString(((attestationData as unknown) as TreeBacked<phase0.AttestationData>).tree.root)
-      );
-    }
+    this.validatedAttestationDatas.add(attestationCacheKey);
   }
 
   /**
@@ -972,7 +964,7 @@ export class ForkChoice implements IForkChoice {
    *
    * Equivalent to:
    *
-   * https://github.com/ethereum/eth2.0-specs/blob/v0.12.1/specs/phase0/fork-choice.md#on_tick
+   * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#on_tick
    */
   private onTick(time: Slot): void {
     const previousSlot = this.fcStore.currentSlot;

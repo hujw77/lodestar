@@ -35,26 +35,27 @@
   },
   "types": "lib/index.d.ts",
   "dependencies": {
+    "@chainsafe/as-sha256": "^0.3.1",
     "@chainsafe/bls": "6.0.3",
     "@chainsafe/lodestar-config": "^0.36.0",
     "@chainsafe/lodestar-params": "^0.36.0",
     "@chainsafe/lodestar-types": "^0.36.0",
     "@chainsafe/lodestar-utils": "^0.36.0",
-    "@chainsafe/persistent-merkle-tree": "^0.3.7",
+    "@chainsafe/persistent-merkle-tree": "^0.4.1",
     "@chainsafe/persistent-ts": "^0.19.1",
-    "@chainsafe/ssz": "^0.8.20",
+    "@chainsafe/ssz": "^0.9.1",
     "bigint-buffer": "^1.1.5",
     "buffer-xor": "^2.0.2"
   },
   "devDependencies": {
-    "@chainsafe/blst": "^0.2.2",
+    "@chainsafe/blst": "^0.2.4",
     "@types/buffer-xor": "^2.0.0",
     "@types/mockery": "^1.4.29",
     "mockery": "^2.1.0"
   },
   "keywords": [
     "ethereum",
-    "eth2",
+    "eth-consensus",
     "beacon",
     "blockchain"
   ]

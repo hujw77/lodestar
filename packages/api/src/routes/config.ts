@@ -1,6 +1,6 @@
 import {BeaconPreset} from "@chainsafe/lodestar-params";
 import {IChainConfig} from "@chainsafe/lodestar-config";
-import {Bytes32, Number64, phase0, ssz} from "@chainsafe/lodestar-types";
+import {Bytes32, UintNum64, phase0, ssz} from "@chainsafe/lodestar-types";
 import {mapValues} from "@chainsafe/lodestar-utils";
 import {ByteVectorType, ContainerType} from "@chainsafe/ssz";
 import {ArrayOf, ContainerData, ReqEmpty, reqEmpty, ReturnTypes, ReqSerializers, RoutesData, sameType} from "../utils";
@@ -8,7 +8,7 @@ import {ArrayOf, ContainerData, ReqEmpty, reqEmpty, ReturnTypes, ReqSerializers,
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
 export type DepositContract = {
-  chainId: Number64;
+  chainId: UintNum64;
   address: Bytes32;
 };
 
@@ -29,9 +29,9 @@ export type Api = {
 
   /**
    * Retrieve specification configuration used on this node.  The configuration should include:
-   *  - Constants for all hard forks known by the beacon node, for example the [phase 0](https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#constants) and [altair](https://github.com/ethereum/eth2.0-specs/blob/dev/specs/altair/beacon-chain.md#constants) values
-   *  - Presets for all hard forks supplied to the beacon node, for example the [phase 0](https://github.com/ethereum/eth2.0-specs/blob/dev/presets/mainnet/phase0.yaml) and [altair](https://github.com/ethereum/eth2.0-specs/blob/dev/presets/mainnet/altair.yaml) values
-   *  - Configuration for the beacon node, for example the [mainnet](https://github.com/ethereum/eth2.0-specs/blob/dev/configs/mainnet.yaml) values
+   *  - Constants for all hard forks known by the beacon node, for example the [phase 0](https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/beacon-chain.md#constants) and [altair](https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/altair/beacon-chain.md#constants) values
+   *  - Presets for all hard forks supplied to the beacon node, for example the [phase 0](https://github.com/ethereum/consensus-specs/blob/v1.1.10/presets/mainnet/phase0.yaml) and [altair](https://github.com/ethereum/consensus-specs/blob/v1.1.10/presets/mainnet/altair.yaml) values
+   *  - Configuration for the beacon node, for example the [mainnet](https://github.com/ethereum/consensus-specs/blob/v1.1.10/configs/mainnet.yaml) values
    *
    * Values are returned with following format:
    * - any value starting with 0x in the spec is returned as a hex string
@@ -57,17 +57,13 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 
 /* eslint-disable @typescript-eslint/naming-convention */
 export function getReturnTypes(): ReturnTypes<Api> {
-  const DepositContract = new ContainerType<DepositContract>({
-    fields: {
-      chainId: ssz.Number64,
-      address: new ByteVectorType({length: 20}),
+  const DepositContract = new ContainerType(
+    {
+      chainId: ssz.UintNum64,
+      address: new ByteVectorType(20),
     },
-    // From beacon apis
-    casingMap: {
-      chainId: "chain_id",
-      address: "address",
-    },
-  });
+    {jsonCase: "eth2"}
+  );
 
   return {
     getDepositContract: ContainerData(DepositContract),

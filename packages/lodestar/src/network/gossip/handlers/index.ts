@@ -67,7 +67,7 @@ const MAX_UNKNOWN_BLOCK_ROOT_RETRIES = 1;
  * - We do expensive processing on the object in the validator function that we need to re-use in the handler function.
  * - The validator function produces extra data that is needed for the handler function. Making this data available in
  *   the handler function scope is hard to achieve without very hacky strategies
- * - Eth2.0 gossipsub protocol strictly defined a single topic for message
+ * - Ethereum Consensus gossipsub protocol strictly defined a single topic for message
  */
 export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): GossipHandlers {
   const {chain, config, metrics, network, logger} = modules;
@@ -161,12 +161,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 
       // Handler
       const {indexedAttestation, committeeIndices} = validationResult;
-      metrics?.registerAggregatedAttestation(
-        OpSource.gossip,
-        seenTimestampSec,
-        signedAggregateAndProof,
-        indexedAttestation
-      );
+      metrics?.registerGossipAggregatedAttestation(seenTimestampSec, signedAggregateAndProof, indexedAttestation);
       const aggregatedAttestation = signedAggregateAndProof.message.aggregate;
 
       chain.aggregatedAttestationPool.add(
@@ -206,7 +201,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 
       // Handler
       const {indexedAttestation} = validationResult;
-      metrics?.registerUnaggregatedAttestation(OpSource.gossip, seenTimestampSec, indexedAttestation);
+      metrics?.registerGossipUnaggregatedAttestation(seenTimestampSec, indexedAttestation);
 
       // Node may be subscribe to extra subnets (long-lived random subnets). For those, validate the messages
       // but don't import them, to save CPU and RAM
@@ -333,7 +328,10 @@ async function validateGossipAggregateAndProofRetryUnknownRoot(
     try {
       return await validateGossipAggregateAndProof(chain, signedAggregateAndProof);
     } catch (e) {
-      if (e instanceof AttestationError && e.type.code === AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT) {
+      if (
+        e instanceof AttestationError &&
+        e.type.code === AttestationErrorCode.UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT
+      ) {
         if (unknownBlockRootRetries++ < MAX_UNKNOWN_BLOCK_ROOT_RETRIES) {
           // Trigger unknown block root search here
 
@@ -372,7 +370,10 @@ async function validateGossipAttestationRetryUnknownRoot(
     try {
       return await validateGossipAttestation(chain, attestation, subnet);
     } catch (e) {
-      if (e instanceof AttestationError && e.type.code === AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT) {
+      if (
+        e instanceof AttestationError &&
+        e.type.code === AttestationErrorCode.UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT
+      ) {
         if (unknownBlockRootRetries++ < MAX_UNKNOWN_BLOCK_ROOT_RETRIES) {
           // Trigger unknown block root search here
 

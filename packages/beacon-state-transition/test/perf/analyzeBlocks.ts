@@ -2,7 +2,7 @@ import {getClient} from "@chainsafe/lodestar-api";
 import {config} from "@chainsafe/lodestar-config/default";
 import {getInfuraBeaconUrl} from "./infura";
 
-// Analyze how eth2 blocks are in a target network to prepare accurate performance states and blocks
+// Analyze how Ethereum Consensus blocks are in a target network to prepare accurate performance states and blocks
 
 // Mainnet
 // slot: 1803658,
@@ -16,7 +16,7 @@ import {getInfuraBeaconUrl} from "./infura";
 // aggregationBitsAvg: 87.88991645944512
 
 const network = "mainnet";
-const client = getClient(config, {baseUrl: getInfuraBeaconUrl(network)});
+const client = getClient({baseUrl: getInfuraBeaconUrl(network)}, {config});
 
 async function run(): Promise<void> {
   const {data: headBlock} = await client.beacon.getBlockHeader("head");
@@ -59,8 +59,9 @@ async function run(): Promise<void> {
       voluntaryExits += block.message.body.voluntaryExits.length;
 
       for (const attestation of block.message.body.attestations) {
+        const indexes = Array.from({length: attestation.aggregationBits.bitLen}, () => 0);
+        aggregationBits += attestation.aggregationBits.intersectValues(indexes).length;
         inclusionDistance += block.message.slot - attestation.data.slot;
-        aggregationBits += Array.from(attestation.aggregationBits).filter((bit) => bit === true).length;
       }
     }
 

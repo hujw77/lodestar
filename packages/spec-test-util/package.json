@@ -40,13 +40,12 @@
   },
   "keywords": [
     "ethereum",
-    "eth2",
+    "eth-consensus",
     "beacon",
     "blockchain"
   ],
   "dependencies": {
     "@chainsafe/lodestar-utils": "^0.36.0",
-    "@chainsafe/ssz": "^0.8.20",
     "async-retry": "^1.3.3",
     "axios": "^0.21.0",
     "chai": "^4.2.0",

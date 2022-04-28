@@ -9,6 +9,8 @@ import {
   DOMAIN_SYNC_COMMITTEE,
 } from "@chainsafe/lodestar-params";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {routes} from "@chainsafe/lodestar-api";
+
 import {isValidMerkleBranch} from "./utils/verifyMerkleBranch";
 import {assertZeroHashes, getParticipantPubkeys, isEmptyHeader} from "./utils/utils";
 import {SyncCommitteeFast} from "./types";
@@ -62,14 +64,14 @@ export function assertValidLightClientUpdate(
  *
  * Where `hashTreeRoot(state) == update.finalityHeader.stateRoot`
  */
-export function assertValidFinalityProof(update: altair.LightClientUpdate): void {
+export function assertValidFinalityProof(update: routes.lightclient.LightclientFinalizedUpdate): void {
   if (
     !isValidMerkleBranch(
       ssz.phase0.BeaconBlockHeader.hashTreeRoot(update.finalizedHeader),
-      Array.from(update.finalityBranch).map((i) => i.valueOf() as Uint8Array),
+      update.finalityBranch,
       FINALIZED_ROOT_DEPTH,
       FINALIZED_ROOT_INDEX,
-      update.attestedHeader.stateRoot.valueOf() as Uint8Array
+      update.attestedHeader.stateRoot
     )
   ) {
     throw Error("Invalid finality header merkle branch");
@@ -96,10 +98,10 @@ export function assertValidSyncCommitteeProof(update: altair.LightClientUpdate):
   if (
     !isValidMerkleBranch(
       ssz.altair.SyncCommittee.hashTreeRoot(update.nextSyncCommittee),
-      Array.from(update.nextSyncCommitteeBranch).map((i) => i.valueOf() as Uint8Array),
+      update.nextSyncCommitteeBranch,
       NEXT_SYNC_COMMITTEE_DEPTH,
       NEXT_SYNC_COMMITTEE_INDEX,
-      activeHeader(update).stateRoot.valueOf() as Uint8Array
+      activeHeader(update).stateRoot
     )
   ) {
     throw Error("Invalid next sync committee merkle branch");
@@ -129,7 +131,7 @@ export function activeHeader(update: altair.LightClientUpdate): phase0.BeaconBlo
  * domain = get_domain(state, DOMAIN_SYNC_COMMITTEE, compute_epoch_at_slot(previous_slot))
  * signing_root = compute_signing_root(get_block_root_at_slot(state, previous_slot), domain)
  * ```
- * Ref: https://github.com/ethereum/eth2.0-specs/blob/dev/specs/altair/beacon-chain.md#sync-committee-processing
+ * Ref: https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/altair/beacon-chain.md#sync-aggregate-processing
  *
  * @param syncCommittee SyncPeriod that signed this update: `computeSyncPeriodAtSlot(update.header.slot) - 1`
  * @param forkVersion ForkVersion that was used to sign the update
@@ -155,9 +157,7 @@ export function assertValidSignedHeader(
     domain: config.getDomain(DOMAIN_SYNC_COMMITTEE, signedHeaderSlot),
   });
 
-  if (
-    !isValidBlsAggregate(participantPubkeys, signingRoot, syncAggregate.syncCommitteeSignature.valueOf() as Uint8Array)
-  ) {
+  if (!isValidBlsAggregate(participantPubkeys, signingRoot, syncAggregate.syncCommitteeSignature)) {
     throw Error("Invalid aggregate signature");
   }
 }

@@ -1,5 +1,5 @@
 import {ENR} from "@chainsafe/discv5";
-import {BitVector, toHexString} from "@chainsafe/ssz";
+import {BitArray, toHexString} from "@chainsafe/ssz";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {altair, Epoch, phase0, ssz} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -30,9 +30,9 @@ export interface IMetadataModules {
 }
 
 /**
- * Implementation of eth2 p2p MetaData.
+ * Implementation of Ethereum Consensus p2p MetaData.
  * For the spec that this code is based on, see:
- * https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#metadata
+ * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#metadata
  */
 export class MetadataController {
   private enr?: ENR;
@@ -69,22 +69,22 @@ export class MetadataController {
     return this._metadata.seqNumber;
   }
 
-  get syncnets(): BitVector {
+  get syncnets(): BitArray {
     return this._metadata.syncnets;
   }
 
-  set syncnets(syncnets: BitVector) {
+  set syncnets(syncnets: BitArray) {
     if (this.enr) {
       this.enr.set(ENRKey.syncnets, ssz.altair.SyncSubnets.serialize(syncnets));
     }
     this._metadata.syncnets = syncnets;
   }
 
-  get attnets(): BitVector {
+  get attnets(): BitArray {
     return this._metadata.attnets;
   }
 
-  set attnets(attnets: BitVector) {
+  set attnets(attnets: BitArray) {
     if (this.enr) {
       this.enr.set(ENRKey.attnets, ssz.phase0.AttestationSubnets.serialize(attnets));
     }
