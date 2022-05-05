@@ -2,6 +2,7 @@ import {LevelDbController} from "@chainsafe/lodestar-db";
 import {SignerType, Signer, SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
 import {getMetrics, MetricsRegister} from "@chainsafe/lodestar-validator";
 import {KeymanagerServer, KeymanagerApi} from "@chainsafe/lodestar-keymanager-server";
+import {SignerDefinition} from "@chainsafe/lodestar-api/keymanager";
 import {RegistryMetricCreator, collectNodeJSMetrics, HttpMetricsServer} from "@chainsafe/lodestar";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {IGlobalArgs} from "../../options/index.js";
@@ -74,7 +75,29 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
         });
       }
 
-      onGracefulShutdownCbs.push(() => unlockSecretKeys?.());
+      if (unlockSecretKeys) {
+        onGracefulShutdownCbs.push(() => unlockSecretKeys());
+      }
+    }
+
+    const remoteSigners: SignerDefinition[] = readRemoteSignerDefinitions();
+    if (remoteSigners.length > 0) {
+      logger.info(`Using ${secretKeys.length} external keys from disk`);
+      for (const remoteSigner of remoteSigners) {
+        signers.push({
+          type: SignerType.Remote,
+          pubkeyHex: remoteSigner.pubkey,
+          externalSignerUrl: remoteSigner.url,
+        });
+      }
+
+      // Log pubkeys for auditing, grouped by signer URL
+      for (const {externalSignerUrl, pubkeysHex} of groupExternalSignersByUrl(remoteSigners)) {
+        logger.info(`External signer URL: ${externalSignerUrl}`);
+        for (const pubkeyHex of pubkeysHex) {
+          logger.info(pubkeyHex);
+        }
+      }
     }
   }
 

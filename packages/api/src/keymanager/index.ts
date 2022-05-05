@@ -4,7 +4,18 @@ import {IHttpClient} from "../client/utils/index.js";
 import {Api} from "./routes.js";
 import * as keymanager from "./client.js";
 
-export {ImportStatus, DeletionStatus, KeystoreStr, SlashingProtectionData, PubkeyHex, Api} from "./routes.js";
+export {
+  ImportStatus,
+  DeletionStatus,
+  ImportRemoteKeyStatus,
+  DeleteRemoteKeyStatus,
+  ResponseStatus,
+  SignerDefinition,
+  KeystoreStr,
+  SlashingProtectionData,
+  PubkeyHex,
+  Api,
+} from "./routes.js";
 
 /**
  * REST HTTP client for all keymanager routes
