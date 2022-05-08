@@ -7,6 +7,7 @@ import {
   CachedBeaconStateAltair,
   CachedBeaconStateBellatrix,
   CachedBeaconStatePhase0,
+  getBlockRootAtSlot,
   phase0,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {processExecutionPayload} from "@chainsafe/lodestar-beacon-state-transition/bellatrix";
@@ -30,6 +31,7 @@ const sync_aggregate: BlockProcessFn<CachedBeaconStateAltair | CachedBeaconState
   // processSyncAggregate() needs the full block to get the slot
   block.slot = state.slot;
   block.body.syncAggregate = ssz.altair.SyncAggregate.toViewDU(testCase["sync_aggregate"]);
+  block.parentRoot = getBlockRootAtSlot(state, Math.max(block.slot, 1) - 1);
 
   altair.processSyncAggregate(state, block);
 };

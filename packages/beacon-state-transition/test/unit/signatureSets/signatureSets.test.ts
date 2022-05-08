@@ -63,7 +63,7 @@ describe("signatureSets", () => {
 
     const state = generateCachedState(config, {validators});
 
-    const signatureSets = allForks.getAllBlockSignatureSets(state, signedBlock);
+    const signatureSets = allForks.getBlockSignatureSets(state, signedBlock);
     expect(signatureSets.length).to.equal(
       // block signature
       1 +
