@@ -4,22 +4,16 @@ import fetch from "cross-fetch";
 import {AbortController, AbortSignal} from "@chainsafe/abort-controller";
 
 import {ErrorAborted, TimeoutError} from "@chainsafe/lodestar-utils";
+import {IGauge, IHistogram} from "../../metrics";
+import {retry} from "../../util/retry";
 import {IJson, IRpcPayload, ReqOpts} from "../interface";
 import {encodeJwtToken} from "./jwt";
-import {retry} from "../../util/retry";
 
-interface IHistogram {
-  startTimer(_arg1: {method: string}): () => void;
-}
-interface IGauge {
-  inc(_arg1: {method: string}, value?: number): void;
-}
-
-export interface IJsonRPCMetrics {
+export type JsonRPCMetrics = {
   responseTime: IHistogram;
   retryCount: IGauge;
   errorCount: IGauge;
-}
+};
 
 /**
  * Limits the amount of response text printed with RPC or parsing errors
@@ -71,7 +65,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
       /** Retry delay, only relevant with retry attempts */
       retryDelay?: number;
       /** Metrics for retry, could be expanded later */
-      metrics?: IJsonRPCMetrics | null;
+      metrics?: JsonRPCMetrics | null;
     }
   ) {
     // Sanity check for all URLs to be properly defined. Otherwise it will error in loop on fetch
@@ -99,14 +93,13 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
   async fetchWithRetries<R, P = IJson[]>(payload: IRpcPayload<P>, opts?: ReqOpts): Promise<R> {
     const timer = this.opts?.metrics?.responseTime.startTimer({method: payload.method});
     try {
-      const res = await retry(
+      const res = await retry<IRpcResponse<R>>(
         async (attempt) => {
           /** If this is a retry, increment the retry counter for this method */
           if (attempt > 0) {
             this.opts?.metrics?.retryCount.inc({method: payload.method});
           }
-          const result: IRpcResponse<R> = await this.fetchJson({jsonrpc: "2.0", id: this.id++, ...payload}, opts);
-          return result;
+          return await this.fetchJson({jsonrpc: "2.0", id: this.id++, ...payload}, opts);
         },
         {
           retries: opts?.retryAttempts ?? this.opts?.retryAttempts ?? 1,

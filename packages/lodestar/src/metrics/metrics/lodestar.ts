@@ -870,5 +870,24 @@ export function createLodestarMetrics(
         labelNames: ["type"],
       }),
     },
+
+    executionEngineHttpClient: {
+      responseTime: register.histogram<"method">({
+        name: "execution_engine_response_time_seconds",
+        help: "Total response time (including retries) for execution engine requests in seconds",
+        labelNames: ["method"],
+        buckets: [0.1, 1, 10, 100],
+      }),
+      retryCount: register.gauge<"method">({
+        name: "execution_engine_retry_count",
+        help: "Count of retries to the execution engine",
+        labelNames: ["method"],
+      }),
+      errorCount: register.gauge<"method">({
+        name: "execution_engine_error_count",
+        help: "Count of api requests that finally failed",
+        labelNames: ["method"],
+      }),
+    },
   };
 }

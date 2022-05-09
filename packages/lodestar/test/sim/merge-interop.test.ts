@@ -161,7 +161,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     const controller = new AbortController();
     const executionEngine = new ExecutionEngineHttp(
       {urls: [engineApiUrl], jwtSecretHex, retryAttempts, retryDelay},
-      {signal: controller.signal}
+      {signal: controller.signal, metrics: null}
     );
 
     // 1. Prepare a payload

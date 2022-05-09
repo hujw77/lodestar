@@ -53,7 +53,7 @@ describe("ExecutionEngine / http ", () => {
         retryAttempts: defaultExecutionEngineHttpOpts.retryAttempts,
         retryDelay: defaultExecutionEngineHttpOpts.retryDelay,
       },
-      {signal: controller.signal}
+      {signal: controller.signal, metrics: null}
     );
   });
 

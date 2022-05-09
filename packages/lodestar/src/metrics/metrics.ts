@@ -12,12 +12,8 @@ import {createLodestarMetrics, ILodestarMetrics} from "./metrics/lodestar";
 import {MetricsOptions} from "./options";
 import {RegistryMetricCreator} from "./utils/registryMetricCreator";
 import {createValidatorMonitor, IValidatorMonitor} from "./validatorMonitor";
-import {createExecutionEngineMetrics, IExecutionEngineMetrics} from "./metrics/executionEngine";
 
-export type IMetrics = IBeaconMetrics &
-  ILodestarMetrics &
-  IValidatorMonitor &
-  IExecutionEngineMetrics & {register: RegistryMetricCreator};
+export type IMetrics = IBeaconMetrics & ILodestarMetrics & IValidatorMonitor & {register: RegistryMetricCreator};
 
 export function createMetrics(
   opts: MetricsOptions,
@@ -29,7 +25,6 @@ export function createMetrics(
   const register = new RegistryMetricCreator();
   const beacon = createBeaconMetrics(register);
   const lodestar = createLodestarMetrics(register, opts.metadata, anchorState);
-  const executionEngine = createExecutionEngineMetrics(register);
 
   const genesisTime = anchorState.genesisTime;
   const validatorMonitor = createValidatorMonitor(lodestar, config, genesisTime, logger);
@@ -59,7 +54,6 @@ export function createMetrics(
     ...beacon,
     ...lodestar,
     ...validatorMonitor,
-    ...executionEngine,
     register,
   };
 }

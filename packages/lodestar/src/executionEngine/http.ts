@@ -3,6 +3,7 @@ import {bellatrix, RootHex, Root} from "@chainsafe/lodestar-types";
 import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
 import {fromHex} from "@chainsafe/lodestar-utils";
 
+import {IMetrics} from "../metrics";
 import {ErrorJsonRpcResponse, HttpRpcError, JsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient";
 import {
   bytesToData,
@@ -23,12 +24,11 @@ import {
   PayloadAttributes,
   ApiPayloadAttributes,
 } from "./interface";
-import {IMetrics} from "../metrics";
 
 export type ExecutionEngineModules = {
   signal: AbortSignal;
   rpc?: IJsonRpcHttpClient;
-  metrics?: IMetrics | null;
+  metrics: IMetrics | null;
 };
 
 export type ExecutionEngineHttpOpts = {
@@ -75,7 +75,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       new JsonRpcHttpClient(opts.urls, {
         ...opts,
         signal,
-        metrics: metrics?.executionEngine,
+        metrics: metrics?.executionEngineHttpClient,
         jwtSecret: opts.jwtSecretHex ? fromHex(opts.jwtSecretHex) : undefined,
       });
   }
@@ -216,8 +216,8 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         }
       : undefined;
 
-    // TODO: propogate latestValidHash to the forkchoice, for now ignore it as we
-    // currently do not propogate the validation status up the forkchoice
+    // TODO: propagate latestValidHash to the forkchoice, for now ignore it as we
+    // currently do not propogate the validation status to the forkchoice
     const {
       payloadStatus: {status, latestValidHash: _latestValidHash, validationError},
       payloadId,
@@ -230,10 +230,8 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         ],
       },
       {
-        // We only retry the forkchoice updates when there are payload attributes
-        shouldRetry: (_lastError) => {
-          return apiPayloadAttributes !== undefined;
-        },
+        // We only retry forkchoice updates when there are payload attributes
+        shouldRetry: (_lastError) => apiPayloadAttributes !== undefined,
       }
     );
 
@@ -288,6 +286,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       method,
       params: [payloadId],
     });
+
     return parseExecutionPayload(executionPayloadRpc);
   }
 }
