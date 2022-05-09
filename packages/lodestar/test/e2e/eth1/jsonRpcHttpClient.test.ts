@@ -155,7 +155,12 @@ describe("eth1 / jsonRpcHttpClient", function () {
 
 describe("eth1 / jsonRpcHttpClient - with retries", async function () {
   this.timeout("10 seconds");
+
   const port = 36421;
+  const urlCorrect = `http://localhost:${port}`;
+  const payload = {method: "get", params: []};
+  const retryAttempts = 2;
+
   const noMethodError = {code: -32601, message: "Method not found"};
   const afterHooks: (() => Promise<void>)[] = [];
 
@@ -170,11 +175,25 @@ describe("eth1 / jsonRpcHttpClient - with retries", async function () {
     }
   });
 
+  async function createServer(requestListener: http.RequestListener): Promise<void> {
+    const server = http.createServer(requestListener);
+
+    await new Promise<void>((resolve) => server.listen(port, resolve));
+    afterHooks.push(
+      () =>
+        new Promise((resolve, reject) =>
+          server.close((err) => {
+            if (err) reject(err);
+            else resolve();
+          })
+        )
+    );
+  }
+
   it("should retry ENOTFOUND", async function () {
     let retryCount = 0;
 
     const url = "https://goerli.fake-website.io";
-    const payload = {method: "get", params: []};
     const retryAttempts = 2;
 
     const controller = new AbortController();
@@ -196,8 +215,6 @@ describe("eth1 / jsonRpcHttpClient - with retries", async function () {
     let retryCount = 0;
 
     const url = `http://localhost:${port + 1}`;
-    const payload = {method: "get", params: []};
-    const retryAttempts = 2;
 
     const controller = new AbortController();
     const eth1JsonRpcClient = new JsonRpcHttpClient([url], {signal: controller.signal});
@@ -217,26 +234,13 @@ describe("eth1 / jsonRpcHttpClient - with retries", async function () {
   it("should retry 404", async function () {
     let retryCount = 0;
 
-    const server = http.createServer((req, res) => {
+    await createServer((req, res) => {
       retryCount++;
       res.statusCode = 404;
       res.end();
     });
 
-    await new Promise<void>((resolve) => server.listen(port, resolve));
-    afterHooks.push(
-      () =>
-        new Promise((resolve, reject) =>
-          server.close((err) => {
-            if (err) reject(err);
-            else resolve();
-          })
-        )
-    );
-
-    const url = `http://localhost:${port}`;
-    const payload = {method: "get", params: []};
-    const retryAttempts = 2;
+    const url = urlCorrect;
 
     const controller = new AbortController();
     const eth1JsonRpcClient = new JsonRpcHttpClient([url], {signal: controller.signal});
@@ -247,25 +251,12 @@ describe("eth1 / jsonRpcHttpClient - with retries", async function () {
   it("should retry timeout", async function () {
     let retryCount = 0;
 
-    const server = http.createServer(() => {
+    await createServer(() => {
       retryCount++;
       // leave the request open until timeout
     });
 
-    await new Promise<void>((resolve) => server.listen(port, resolve));
-    afterHooks.push(
-      () =>
-        new Promise((resolve, reject) =>
-          server.close((err) => {
-            if (err) reject(err);
-            else resolve();
-          })
-        )
-    );
-
-    const url = `http://localhost:${port}`;
-    const payload = {method: "get", params: []};
-    const retryAttempts = 2;
+    const url = urlCorrect;
     const timeout = 2000;
 
     const controller = new AbortController();
@@ -278,25 +269,13 @@ describe("eth1 / jsonRpcHttpClient - with retries", async function () {
 
   it("should retry aborted", async function () {
     let retryCount = 0;
-    const server = http.createServer(() => {
+
+    await createServer(() => {
       retryCount++;
       // leave the request open until timeout
     });
 
-    await new Promise<void>((resolve) => server.listen(port, resolve));
-    afterHooks.push(
-      () =>
-        new Promise((resolve, reject) =>
-          server.close((err) => {
-            if (err) reject(err);
-            else resolve();
-          })
-        )
-    );
-
-    const url = `http://localhost:${port}`;
-    const payload = {method: "get", params: []};
-    const retryAttempts = 2;
+    const url = urlCorrect;
     const timeout = 2000;
 
     const controller = new AbortController();
@@ -311,26 +290,13 @@ describe("eth1 / jsonRpcHttpClient - with retries", async function () {
   it("should not retry payload error", async function () {
     let retryCount = 0;
 
-    const server = http.createServer((req, res) => {
+    await createServer((req, res) => {
       retryCount++;
       res.setHeader("Content-Type", "application/json");
       res.end(JSON.stringify({jsonrpc: "2.0", id: 83, error: noMethodError}));
     });
 
-    await new Promise<void>((resolve) => server.listen(port, resolve));
-    afterHooks.push(
-      () =>
-        new Promise((resolve, reject) =>
-          server.close((err) => {
-            if (err) reject(err);
-            else resolve();
-          })
-        )
-    );
-
-    const url = `http://localhost:${port}`;
-    const payload = {method: "get", params: []};
-    const retryAttempts = 2;
+    const url = urlCorrect;
 
     const controller = new AbortController();
     const eth1JsonRpcClient = new JsonRpcHttpClient([url], {signal: controller.signal});
