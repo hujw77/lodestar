@@ -1,14 +1,13 @@
-import {AbortSignal} from "@chainsafe/abort-controller";
 import {toHexString} from "@chainsafe/ssz";
-import {allForks, Epoch, phase0, Slot, ssz, Version} from "@chainsafe/lodestar-types";
+import {allForks, Epoch, phase0, Slot, Version} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {CheckpointWithHex, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {CachedBeaconStateAllForks, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
-import {AttestationError, BlockError, BlockErrorCode} from "./errors";
-import {ChainEvent, IChainEvents} from "./emitter";
-import {BeaconChain} from "./chain";
-import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "./reprocess";
-import {toCheckpointHex} from "./stateCache";
+import {AttestationError, BlockError, BlockErrorCode} from "./errors/index.js";
+import {ChainEvent, IChainEvents} from "./emitter.js";
+import {BeaconChain} from "./chain.js";
+import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "./reprocess.js";
+import {toCheckpointHex} from "./stateCache/index.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyCallback = () => Promise<void>;
@@ -96,6 +95,8 @@ export async function onClockSlot(this: BeaconChain, slot: Slot): Promise<void> 
 export function onClockEpoch(this: BeaconChain, currentEpoch: Epoch): void {
   this.seenAttesters.prune(currentEpoch);
   this.seenAggregators.prune(currentEpoch);
+  this.seenAggregatedAttestations.prune(currentEpoch);
+  this.beaconProposerCache.prune(currentEpoch);
 }
 
 export function onForkVersion(this: BeaconChain, version: Version): void {
@@ -151,26 +152,41 @@ export async function onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWit
 }
 
 export function onForkChoiceHead(this: BeaconChain, head: IProtoBlock): void {
+  const delaySec = this.clock.secFromSlot(head.slot);
   this.logger.verbose("New chain head", {
     headSlot: head.slot,
     headRoot: head.blockRoot,
+    delaySec,
   });
   this.syncContributionAndProofPool.prune(head.slot);
   this.seenContributionAndProof.prune(head.slot);
-  this.metrics?.headSlot.set(head.slot);
+
+  if (this.metrics) {
+    this.metrics.headSlot.set(head.slot);
+    // Only track "recent" blocks. Otherwise sync can distort this metrics heavily.
+    // We want to track recent blocks coming from gossip, unknown block sync, and API.
+    if (delaySec < 64 * this.config.SECONDS_PER_SLOT) {
+      this.metrics.elapsedTimeTillBecomeHead.observe(delaySec);
+    }
+  }
 }
 
 export function onForkChoiceReorg(this: BeaconChain, head: IProtoBlock, oldHead: IProtoBlock, depth: number): void {
-  this.logger.verbose("Chain reorg", {depth});
+  this.logger.verbose("Chain reorg", {
+    depth,
+    previousHead: oldHead.blockRoot,
+    previousHeadParent: oldHead.parentRoot,
+    previousSlot: oldHead.slot,
+    newHead: head.blockRoot,
+    newHeadParent: head.parentRoot,
+    newSlot: head.slot,
+  });
 }
 
-export function onAttestation(this: BeaconChain, attestation: phase0.Attestation): void {
-  this.logger.debug("Attestation processed", {
-    slot: attestation.data.slot,
-    index: attestation.data.index,
-    targetRoot: toHexString(attestation.data.target.root),
-    aggregationBits: ssz.phase0.CommitteeBits.toJson(attestation.aggregationBits) as string,
-  });
+export function onAttestation(this: BeaconChain, _: phase0.Attestation): void {
+  // don't want to log the processed attestations here as there are so many attestations and it takes too much disc space,
+  // users may want to keep more log files instead of unnecessary processed attestations log
+  // see https://github.com/ChainSafe/lodestar/pull/4032
 }
 
 export async function onBlock(
@@ -186,6 +202,7 @@ export async function onBlock(
   this.logger.verbose("Block processed", {
     slot: block.message.slot,
     root: blockRoot,
+    delaySec: this.clock.secFromSlot(block.message.slot),
   });
 }
 
@@ -214,37 +231,19 @@ export async function onErrorBlock(this: BeaconChain, err: BlockError): Promise<
     const {signedBlock} = err;
     const blockSlot = signedBlock.message.slot;
     const {state} = err.type;
-    const blockPath = this.persistInvalidSszObject(
-      "signedBlock",
-      this.config.getForkTypes(blockSlot).SignedBeaconBlock.serialize(signedBlock),
-      `${blockSlot}_invalid_signature`
-    );
-    const statePath = this.persistInvalidSszObject("state", state.serialize(), `${state.slot}_invalid_signature`);
-    this.logger.debug("Invalid signature block and state were written to disc", {blockPath, statePath});
+    const forkTypes = this.config.getForkTypes(blockSlot);
+    this.persistInvalidSszValue(forkTypes.SignedBeaconBlock, signedBlock, `${blockSlot}_invalid_signature`);
+    this.persistInvalidSszView(state, `${state.slot}_invalid_signature`);
   } else if (err.type.code === BlockErrorCode.INVALID_STATE_ROOT) {
     const {signedBlock} = err;
     const blockSlot = signedBlock.message.slot;
     const {preState, postState} = err.type;
+    const forkTypes = this.config.getForkTypes(blockSlot);
     const invalidRoot = toHexString(postState.hashTreeRoot());
-    const blockPath = this.persistInvalidSszObject(
-      "signedBlock",
-      this.config.getForkTypes(blockSlot).SignedBeaconBlock.serialize(signedBlock),
-      `${blockSlot}_invalid_state_root_${invalidRoot}`
-    );
-    const preStatePath = this.persistInvalidSszObject(
-      "state",
-      preState.serialize(),
-      `${blockSlot}_invalid_state_root_preState_${invalidRoot}`
-    );
-    const postStatePath = this.persistInvalidSszObject(
-      "state",
-      postState.serialize(),
-      `${blockSlot}_invalid_state_root_postState_${invalidRoot}`
-    );
-    this.logger.debug("Invalid state root block and states were written to disc", {
-      blockPath,
-      preStatePath,
-      postStatePath,
-    });
+
+    const suffix = `slot_${blockSlot}_invalid_state_root_${invalidRoot}`;
+    this.persistInvalidSszValue(forkTypes.SignedBeaconBlock, signedBlock, suffix);
+    this.persistInvalidSszView(preState, `${suffix}_preState`);
+    this.persistInvalidSszView(postState, `${suffix}_postState`);
   }
 }

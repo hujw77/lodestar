@@ -1,9 +1,12 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {fastify} from "fastify";
-import {AbortController} from "@chainsafe/abort-controller";
-import {ExecutionEngineHttp, parseExecutionPayload, serializeExecutionPayload} from "../../../src/executionEngine/http";
-import {defaultExecutionEngineHttpOpts} from "../../../lib/executionEngine/http";
+import {
+  ExecutionEngineHttp,
+  parseExecutionPayload,
+  serializeExecutionPayload,
+  defaultExecutionEngineHttpOpts,
+} from "../../../src/executionEngine/http.js";
 
 chai.use(chaiAsPromised);
 

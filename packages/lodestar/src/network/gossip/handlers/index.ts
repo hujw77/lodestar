@@ -1,11 +1,11 @@
-import {toHexString} from "@chainsafe/ssz";
 import PeerId from "peer-id";
+import {toHexString} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {phase0, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {ILogger, prettyBytes} from "@chainsafe/lodestar-utils";
-import {IMetrics} from "../../../metrics";
-import {OpSource} from "../../../metrics/validatorMonitor";
-import {IBeaconChain} from "../../../chain";
+import {IMetrics} from "../../../metrics/index.js";
+import {OpSource} from "../../../metrics/validatorMonitor.js";
+import {IBeaconChain} from "../../../chain/index.js";
 import {
   AttestationError,
   AttestationErrorCode,
@@ -14,8 +14,8 @@ import {
   BlockGossipError,
   GossipAction,
   SyncCommitteeError,
-} from "../../../chain/errors";
-import {GossipHandlers, GossipType} from "../interface";
+} from "../../../chain/errors/index.js";
+import {GossipHandlers, GossipType} from "../interface.js";
 import {
   validateGossipAggregateAndProof,
   validateGossipAttestation,
@@ -25,10 +25,10 @@ import {
   validateGossipSyncCommittee,
   validateSyncCommitteeGossipContributionAndProof,
   validateGossipVoluntaryExit,
-} from "../../../chain/validation";
-import {INetwork} from "../../interface";
-import {NetworkEvent} from "../../events";
-import {PeerAction} from "../../peers";
+} from "../../../chain/validation/index.js";
+import {INetwork} from "../../interface.js";
+import {NetworkEvent} from "../../events.js";
+import {PeerAction} from "../../peers/index.js";
 
 /**
  * Gossip handler options as part of network options
@@ -75,12 +75,15 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
   return {
     [GossipType.beacon_block]: async (signedBlock, topic, peerIdStr, seenTimestampSec) => {
       const slot = signedBlock.message.slot;
-      const blockHex = prettyBytes(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
+      const forkTypes = config.getForkTypes(slot);
+      const blockHex = prettyBytes(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
+      const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
       logger.verbose("Received gossip block", {
         slot: slot,
         root: blockHex,
         curentSlot: chain.clock.currentSlot,
         peerId: peerIdStr,
+        delaySec,
       });
 
       try {
@@ -94,12 +97,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
         }
 
         if (e instanceof BlockGossipError && e.action === GossipAction.REJECT) {
-          const archivedPath = chain.persistInvalidSszObject(
-            "signedBlock",
-            config.getForkTypes(slot).SignedBeaconBlock.serialize(signedBlock),
-            `gossip_slot_${slot}`
-          );
-          logger.debug("The invalid gossip block was written to", archivedPath);
+          chain.persistInvalidSszValue(forkTypes.SignedBeaconBlock, signedBlock, `gossip_reject_slot_${slot}`);
         }
 
         throw e;
@@ -120,8 +118,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
         .processBlock(signedBlock, {validProposerSignature: true, blsVerifyOnMainThread: true})
         .then(() => {
           // Returns the delay between the start of `block.slot` and `current time`
-          const delaySec = Date.now() / 1000 - (chain.genesisTime + slot * config.SECONDS_PER_SLOT);
-          metrics?.gossipBlock.elappsedTimeTillProcessed.observe(delaySec);
+          const delaySec = chain.clock.secFromSlot(slot);
+          metrics?.gossipBlock.elapsedTimeTillProcessed.observe(delaySec);
         })
         .catch((e) => {
           if (e instanceof BlockError) {
@@ -149,12 +147,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
         validationResult = await validateGossipAggregateAndProofRetryUnknownRoot(chain, signedAggregateAndProof);
       } catch (e) {
         if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
-          const archivedPath = chain.persistInvalidSszObject(
-            "signedAggregatedAndProof",
-            ssz.phase0.SignedAggregateAndProof.serialize(signedAggregateAndProof),
-            toHexString(ssz.phase0.SignedAggregateAndProof.hashTreeRoot(signedAggregateAndProof))
-          );
-          logger.debug("The invalid gossip aggregate and proof was written to", archivedPath, e);
+          chain.persistInvalidSszValue(ssz.phase0.SignedAggregateAndProof, signedAggregateAndProof, "gossip_reject");
         }
         throw e;
       }
@@ -166,7 +159,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 
       chain.aggregatedAttestationPool.add(
         aggregatedAttestation,
-        indexedAttestation.attestingIndices as ValidatorIndex[],
+        indexedAttestation.attestingIndices.length,
         committeeIndices
       );
 
@@ -189,12 +182,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
         validationResult = await validateGossipAttestationRetryUnknownRoot(chain, attestation, subnet);
       } catch (e) {
         if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
-          const archivedPath = chain.persistInvalidSszObject(
-            "attestation",
-            ssz.phase0.Attestation.serialize(attestation),
-            toHexString(ssz.phase0.Attestation.hashTreeRoot(attestation))
-          );
-          logger.debug("The invalid gossip attestation was written to", archivedPath);
+          chain.persistInvalidSszValue(ssz.phase0.Attestation, attestation, "gossip_reject");
         }
         throw e;
       }
@@ -266,12 +254,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
         contributionAndProof
       ).catch((e) => {
         if (e instanceof SyncCommitteeError && e.action === GossipAction.REJECT) {
-          const archivedPath = chain.persistInvalidSszObject(
-            "contributionAndProof",
-            ssz.altair.SignedContributionAndProof.serialize(contributionAndProof),
-            toHexString(ssz.altair.SignedContributionAndProof.hashTreeRoot(contributionAndProof))
-          );
-          logger.debug("The invalid gossip contribution and proof was written to", archivedPath);
+          chain.persistInvalidSszValue(ssz.altair.SignedContributionAndProof, contributionAndProof, "gossip_reject");
         }
         throw e;
       });
@@ -291,12 +274,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
         indexInSubcommittee = (await validateGossipSyncCommittee(chain, syncCommittee, subnet)).indexInSubcommittee;
       } catch (e) {
         if (e instanceof SyncCommitteeError && e.action === GossipAction.REJECT) {
-          const archivedPath = chain.persistInvalidSszObject(
-            "syncCommittee",
-            ssz.altair.SyncCommitteeMessage.serialize(syncCommittee),
-            toHexString(ssz.altair.SyncCommitteeMessage.hashTreeRoot(syncCommittee))
-          );
-          logger.debug("The invalid gossip sync committee was written to", archivedPath);
+          chain.persistInvalidSszValue(ssz.altair.SyncCommitteeMessage, syncCommittee, "gossip_reject");
         }
         throw e;
       }

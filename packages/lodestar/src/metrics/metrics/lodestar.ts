@@ -1,6 +1,6 @@
 import {allForks} from "@chainsafe/lodestar-types";
-import {RegistryMetricCreator} from "../utils/registryMetricCreator";
-import {LodestarMetadata} from "../options";
+import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
+import {LodestarMetadata} from "../options.js";
 
 export type ILodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 
@@ -49,9 +49,10 @@ export function createLodestarMetrics(
       help: "number of peers, labeled by client",
       labelNames: ["client"],
     }),
-    peerLongLivedSubnets: register.avgMinMax({
-      name: "lodestar_peer_long_lived_subnets_avg_min_max",
-      help: "Avg min max of amount of long lived subnets of peers",
+    peerLongLivedAttnets: register.histogram({
+      name: "lodestar_peer_long_lived_attnets_count",
+      help: "Histogram of current count of long lived attnets of connected peers",
+      buckets: [0, 4, 16, 32, 64],
     }),
     peerScore: register.avgMinMax({
       name: "lodestar_peer_score_avg_min_max",
@@ -94,9 +95,10 @@ export function createLodestarMetrics(
       name: "lodestar_peers_requested_total_to_connect",
       help: "Priorization results total peers count requested to connect",
     }),
-    peersRequestedToDisconnect: register.gauge({
+    peersRequestedToDisconnect: register.gauge<"reason">({
       name: "lodestar_peers_requested_total_to_disconnect",
       help: "Priorization results total peers count requested to disconnect",
+      labelNames: ["reason"],
     }),
     peersRequestedSubnetsToQuery: register.gauge<"type">({
       name: "lodestar_peers_requested_total_subnets_to_query",
@@ -113,6 +115,13 @@ export function createLodestarMetrics(
       help: "network.reportPeer count by reason",
       labelNames: ["reason"],
     }),
+    peerManager: {
+      heartbeatDuration: register.histogram({
+        name: "lodestar_peer_manager_heartbeat_duration_seconds",
+        help: "Peer manager heartbeat function duration in seconds",
+        buckets: [0.001, 0.01, 0.1, 1],
+      }),
+    },
 
     discovery: {
       peersToConnect: register.gauge({
@@ -514,17 +523,22 @@ export function createLodestarMetrics(
 
     // Gossip block
     gossipBlock: {
-      elappsedTimeTillReceived: register.histogram({
+      elapsedTimeTillReceived: register.histogram({
         name: "lodestar_gossip_block_elappsed_time_till_received",
         help: "Time elappsed between block slot time and the time block received via gossip",
-        buckets: [0.1, 1, 10],
+        buckets: [0.5, 1, 2, 4, 6, 12],
       }),
-      elappsedTimeTillProcessed: register.histogram({
+      elapsedTimeTillProcessed: register.histogram({
         name: "lodestar_gossip_block_elappsed_time_till_processed",
         help: "Time elappsed between block slot time and the time block processed",
-        buckets: [0.1, 1, 10],
+        buckets: [0.5, 1, 2, 4, 6, 12],
       }),
     },
+    elapsedTimeTillBecomeHead: register.histogram({
+      name: "lodestar_gossip_block_elapsed_time_till_become_head",
+      help: "Time elappsed between block slot time and the time block becomes head",
+      buckets: [0.5, 1, 2, 4, 6, 12],
+    }),
 
     backfillSync: {
       backfilledTillSlot: register.gauge({
@@ -793,6 +807,39 @@ export function createLodestarMetrics(
         name: "lodestar_cp_state_epoch_seconds_since_last_read",
         help: "Avg min max of all state cache items seconds since last reads",
       }),
+    },
+
+    seenCache: {
+      aggregatedAttestations: {
+        superSetCheckTotal: register.histogram({
+          name: "lodestar_seen_cache_aggregated_attestations_super_set_check_total",
+          help: "Number of times to call isNonStrictSuperSet in SeenAggregatedAttestations",
+          buckets: [1, 4, 10],
+        }),
+        isKnownCalls: register.gauge({
+          name: "lodestar_seen_cache_aggregated_attestations_is_known_call_total",
+          help: "Total times calling SeenAggregatedAttestations.isKnown",
+        }),
+        isKnownHits: register.gauge({
+          name: "lodestar_seen_cache_aggregated_attestations_is_known_hit_total",
+          help: "Total times SeenAggregatedAttestations.isKnown returning true",
+        }),
+      },
+      committeeContributions: {
+        superSetCheckTotal: register.histogram({
+          name: "lodestar_seen_cache_committee_contributions_super_set_check_total",
+          help: "Number of times to call isNonStrictSuperSet in SeenContributionAndProof",
+          buckets: [1, 4, 10],
+        }),
+        isKnownCalls: register.gauge({
+          name: "lodestar_seen_cache_committee_contributions_is_known_call_total",
+          help: "Total times calling SeenContributionAndProof.isKnown",
+        }),
+        isKnownHits: register.gauge({
+          name: "lodestar_seen_cache_committee_contributions_is_known_hit_total",
+          help: "Total times SeenContributionAndProof.isKnown returning true",
+        }),
+      },
     },
 
     regenFnCallTotal: register.gauge<"entrypoint" | "caller">({

@@ -1,13 +1,17 @@
 import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@chainsafe/lodestar-params";
-import {ForkChoiceOpts} from "./forkChoice";
+import {defaultDefaultFeeRecipient} from "@chainsafe/lodestar-validator";
+import {ArchiverOpts} from "./archiver/index.js";
+import {ForkChoiceOpts} from "./forkChoice/index.js";
 
 // eslint-disable-next-line @typescript-eslint/ban-types
 export type IChainOptions = BlockProcessOpts &
-  ForkChoiceOpts & {
+  ForkChoiceOpts &
+  ArchiverOpts & {
     blsVerifyAllMainThread?: boolean;
     blsVerifyAllMultiThread?: boolean;
     persistInvalidSszObjects?: boolean;
-    persistInvalidSszObjectsDir: string;
+    persistInvalidSszObjectsDir?: string;
+    defaultFeeRecipient: string;
   };
 
 export type BlockProcessOpts = {
@@ -26,8 +30,7 @@ export const defaultChainOptions: IChainOptions = {
   blsVerifyAllMainThread: false,
   blsVerifyAllMultiThread: false,
   disableBlsBatchVerify: false,
-  persistInvalidSszObjects: true,
-  persistInvalidSszObjectsDir: "",
-  proposerBoostEnabled: false,
+  proposerBoostEnabled: true,
   safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
+  defaultFeeRecipient: defaultDefaultFeeRecipient,
 };

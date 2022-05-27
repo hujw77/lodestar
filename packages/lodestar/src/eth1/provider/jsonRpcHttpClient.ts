@@ -1,13 +1,12 @@
 // Uses cross-fetch for browser + NodeJS cross compatibility
 // Note: isomorphic-fetch is not well mantained and does not support abort signals
 import fetch from "cross-fetch";
-import {AbortController, AbortSignal} from "@chainsafe/abort-controller";
 
 import {ErrorAborted, TimeoutError} from "@chainsafe/lodestar-utils";
-import {IGauge, IHistogram} from "../../metrics";
-import {retry} from "../../util/retry";
-import {IJson, IRpcPayload, ReqOpts} from "../interface";
-import {encodeJwtToken} from "./jwt";
+import {IJson, IRpcPayload, ReqOpts} from "../interface.js";
+import {IGauge, IHistogram} from "../../metrics/index.js";
+import {retry} from "../../util/retry.js";
+import {encodeJwtToken} from "./jwt.js";
 
 export type JsonRPCMetrics = {
   responseTime: IHistogram;

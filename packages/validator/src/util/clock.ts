@@ -1,4 +1,3 @@
-import {AbortSignal} from "@chainsafe/abort-controller";
 import {ErrorAborted, ILogger, isErrorAborted, sleep} from "@chainsafe/lodestar-utils";
 import {GENESIS_SLOT, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
@@ -9,6 +8,7 @@ type RunEveryFn = (slot: Slot, signal: AbortSignal) => Promise<void>;
 
 export interface IClock {
   readonly genesisTime: number;
+  readonly secondsPerSlot: number;
   start(signal: AbortSignal): void;
   runEverySlot(fn: (slot: Slot, signal: AbortSignal) => Promise<void>): void;
   runEveryEpoch(fn: (epoch: Epoch, signal: AbortSignal) => Promise<void>): void;
@@ -23,12 +23,14 @@ export enum TimeItem {
 
 export class Clock implements IClock {
   readonly genesisTime: number;
+  readonly secondsPerSlot: number;
   private readonly config: IChainForkConfig;
   private readonly logger: ILogger;
   private readonly fns: {timeItem: TimeItem; fn: RunEveryFn}[] = [];
 
   constructor(config: IChainForkConfig, logger: ILogger, opts: {genesisTime: number}) {
     this.genesisTime = opts.genesisTime;
+    this.secondsPerSlot = config.SECONDS_PER_SLOT;
     this.config = config;
     this.logger = logger;
   }

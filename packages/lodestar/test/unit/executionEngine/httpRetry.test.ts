@@ -3,9 +3,9 @@ import chaiAsPromised from "chai-as-promised";
 import {fastify} from "fastify";
 import {AbortController} from "@chainsafe/abort-controller";
 import {fromHexString} from "@chainsafe/ssz";
-import {ExecutionEngineHttp} from "../../../src/executionEngine/http";
-import {defaultExecutionEngineHttpOpts} from "../../../lib/executionEngine/http";
-import {bytesToData, numToQuantity} from "../../../src/eth1/provider/utils";
+import {ExecutionEngineHttp} from "../../../src/executionEngine/http.js";
+import {defaultExecutionEngineHttpOpts} from "../../../lib/executionEngine/http.js";
+import {bytesToData, numToQuantity} from "../../../src/eth1/provider/utils.js";
 
 chai.use(chaiAsPromised);
 
@@ -104,7 +104,7 @@ describe("ExecutionEngine / http ", () => {
       const payloadAttributes = {
         timestamp: 1647036763,
         prevRandao: fromHexString("0x0000000000000000000000000000000000000000000000000000000000000000"),
-        suggestedFeeRecipient: fromHexString("0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
+        suggestedFeeRecipient: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
       };
 
       const request = {
@@ -115,7 +115,7 @@ describe("ExecutionEngine / http ", () => {
           {
             timestamp: numToQuantity(payloadAttributes.timestamp),
             prevRandao: bytesToData(payloadAttributes.prevRandao),
-            suggestedFeeRecipient: bytesToData(payloadAttributes.suggestedFeeRecipient),
+            suggestedFeeRecipient: payloadAttributes.suggestedFeeRecipient,
           },
         ],
       };

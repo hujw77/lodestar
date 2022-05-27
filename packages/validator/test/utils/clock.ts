@@ -1,11 +1,11 @@
-import {AbortSignal} from "@chainsafe/abort-controller";
 import {Epoch, Slot} from "@chainsafe/lodestar-types";
-import {IClock} from "../../src/util";
+import {IClock} from "../../src/util/index.js";
 
 type RunEveryFn = (slot: Slot, signal: AbortSignal) => Promise<void>;
 
 export class ClockMock implements IClock {
   readonly genesisTime = 0;
+  readonly secondsPerSlot = 12;
 
   private readonly everySlot: RunEveryFn[] = [];
   private readonly everyEpoch: RunEveryFn[] = [];
