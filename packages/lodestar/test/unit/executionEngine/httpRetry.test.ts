@@ -3,8 +3,7 @@ import chaiAsPromised from "chai-as-promised";
 import {fastify} from "fastify";
 import {AbortController} from "@chainsafe/abort-controller";
 import {fromHexString} from "@chainsafe/ssz";
-import {ExecutionEngineHttp} from "../../../src/executionEngine/http.js";
-import {defaultExecutionEngineHttpOpts} from "../../../lib/executionEngine/http.js";
+import {ExecutionEngineHttp, defaultExecutionEngineHttpOpts} from "../../../src/executionEngine/http.js";
 import {bytesToData, numToQuantity} from "../../../src/eth1/provider/utils.js";
 
 chai.use(chaiAsPromised);
