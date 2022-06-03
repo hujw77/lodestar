@@ -955,6 +955,10 @@ export function createLodestarMetrics(
         name: "lodestar_eth1_follow_distance_seconds",
         help: "Constant with value = SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE",
       }),
+      eth1FollowDistance: register.gauge({
+        name: "lodestar_eth1_follow_distance",
+        help: "Dynamic follow distance set by the deposit tracker",
+      }),
     },
   };
 }

@@ -74,7 +74,10 @@ export class Eth1DepositDataTracker {
     }
 
     // Set constant value once
-    metrics?.eth1.eth1FollowDistanceSeconds.set(config.SECONDS_PER_ETH1_BLOCK * config.ETH1_FOLLOW_DISTANCE);
+    if (metrics) {
+      metrics.eth1.eth1FollowDistanceSeconds.set(config.SECONDS_PER_ETH1_BLOCK * config.ETH1_FOLLOW_DISTANCE);
+      metrics.eth1.eth1FollowDistance.addCollect(() => metrics.eth1.eth1FollowDistance.set(this.eth1FollowDistance));
+    }
 
     this.runAutoUpdate().catch((e: Error) => {
       if (!(e instanceof ErrorAborted)) {
