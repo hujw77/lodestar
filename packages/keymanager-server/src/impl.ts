@@ -16,22 +16,30 @@ import {
 } from "@chainsafe/lodestar-api/keymanager";
 import {fromHexString} from "@chainsafe/ssz";
 import {Interchange, SignerType, Validator} from "@chainsafe/lodestar-validator";
-import {PubkeyHex} from "@chainsafe/lodestar-validator/src/types";
 import {lockFilepath, unlockFilepath} from "./util/lockfile.js";
 
-export const KEY_IMPORTED_PREFIX = "key_imported";
-export const REMOTE_KEY_IMPORTED_PREFIX = "remote_key_imported";
+export const KEYSTORE_IMPORTED_PREFIX = "imported_keystore";
+export const REMOTE_KEY_IMPORTED_PREFIX = "imported_remote_key";
+
+export type KeymanagerOpts = {
+  /** Directory to persist imported keystores. Can be the same as `importedRemoteSignersDirpath` */
+  importedKeystoresDirpath: string;
+  /** Directory to persist imported remote signers. Can be the same as `importedKeystoresDirpath` */
+  importedRemoteSignersDirpath: string;
+};
 
 export class KeymanagerApi implements Api {
-  constructor(private readonly validator: Validator, private readonly importKeystoresDirpath: string) {
-    if (fs.existsSync(importKeystoresDirpath)) {
-      // Ensure is directory
-      if (!fs.statSync(importKeystoresDirpath).isDirectory()) {
-        throw Error("importKeystoresPath is not a directory");
+  constructor(private readonly validator: Validator, private readonly opts: KeymanagerOpts) {
+    for (const dirpath of [opts.importedKeystoresDirpath, opts.importedRemoteSignersDirpath]) {
+      if (fs.existsSync(dirpath)) {
+        // Ensure is directory
+        if (!fs.statSync(dirpath).isDirectory()) {
+          throw Error(`${dirpath} must be a directory`);
+        }
+      } else {
+        // Or, create empty directory
+        fs.mkdirSync(dirpath, {recursive: true});
       }
-    } else {
-      // Or, create empty directory
-      fs.mkdirSync(importKeystoresDirpath, {recursive: true});
     }
   }
 
@@ -286,12 +294,22 @@ export class KeymanagerApi implements Api {
   }
 
   private getKeystoreFilepath(pubkeyHex: string): string {
-    return path.join(this.importKeystoresDirpath, `${KEY_IMPORTED_PREFIX}_${pubkeyHex}.json`);
+    return path.join(this.opts.importedKeystoresDirpath, `${KEYSTORE_IMPORTED_PREFIX}_${pubkeyHex}.json`);
   }
 
   private getRemoteKeyFilepath(pubkeyHex: string): string {
-    return path.join(this.importKeystoresDirpath, `${REMOTE_KEY_IMPORTED_PREFIX}_${pubkeyHex}.json`);
+    return path.join(this.opts.importedRemoteSignersDirpath, `${REMOTE_KEY_IMPORTED_PREFIX}_${pubkeyHex}.json`);
   }
+}
+
+/**
+ * Read all RemoteSigner definition files from a `importedRemoteSignersDirpath`
+ */
+export function readRemoteSignerDefinitions(dirpath: string): SignerDefinition[] {
+  return fs
+    .readdirSync(dirpath)
+    .filter((filename) => filename.startsWith(REMOTE_KEY_IMPORTED_PREFIX) && filename.endsWith(".json"))
+    .map((filename) => readRemoteSignerDefinition(path.join(dirpath, filename)));
 }
 
 /**

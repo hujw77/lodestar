@@ -1,9 +1,11 @@
 import {LevelDbController} from "@chainsafe/lodestar-db";
-import {SignerType, Signer, SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
+import {SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
+import {SignerType, SignerLocal, SignerRemote, Signer} from "@chainsafe/lodestar-validator";
 import {getMetrics, MetricsRegister} from "@chainsafe/lodestar-validator";
-import {KeymanagerServer, KeymanagerApi} from "@chainsafe/lodestar-keymanager-server";
+import {KeymanagerServer, KeymanagerApi, readRemoteSignerDefinitions} from "@chainsafe/lodestar-keymanager-server";
 import {SignerDefinition} from "@chainsafe/lodestar-api/keymanager";
 import {RegistryMetricCreator, collectNodeJSMetrics, HttpMetricsServer} from "@chainsafe/lodestar";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {IGlobalArgs} from "../../options/index.js";
 import {YargsError, getDefaultGraffiti, mkdir, getCliLogger} from "../../util/index.js";
@@ -38,74 +40,62 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     for (const cb of onGracefulShutdownCbs) await cb();
   }, logger.info.bind(logger));
 
+  // A validator signer is an item capable of producing signatures. Two types exist:
+  // - Local: a secret key capable of signing
+  // - Remote: a URL that supports EIP-3030 (BLS Remote Signer HTTP API)
+  //
+  // Local secret keys can be gathered from:
+  // - Local keystores existant on disk
+  // - Local keystores imported via keymanager api
+  // - Derived from a mnemonic (TESTING ONLY)
+  // - Derived from interop keys (TESTING ONLY)
+  //
+  // Remote signers need to pre-declare the list of pubkeys to validate with
+  // - Via CLI argument
+  // - Fetched directly from remote signer API
+  // - Remote signer definition imported from keymanager api
+  //
+  // Questions:
+  // - Where to persist keystores imported via remote signer API?
+  // - Where to persist remote signer definitions imported by API?
+  // - Is it necessary to know the origin of a file? If it was imported or there already?
+  // - How to handle the locks?
+  const importedRemoteSignersDirpath = "";
+  const importedKeystoresDirpath = "";
+
   const signers: Signer[] = [];
 
   // Read remote keys
   const externalSigners = await getExternalSigners(args);
   if (externalSigners.length > 0) {
-    logger.info(`Using ${externalSigners.length} external keys`);
     for (const {externalSignerUrl, pubkeyHex} of externalSigners) {
-      signers.push({
-        type: SignerType.Remote,
-        pubkeyHex: pubkeyHex,
-        externalSignerUrl,
-      });
-    }
-
-    // Log pubkeys for auditing, grouped by signer URL
-    for (const {externalSignerUrl, pubkeysHex} of groupExternalSignersByUrl(externalSigners)) {
-      logger.info(`External signer URL: ${externalSignerUrl}`);
-      for (const pubkeyHex of pubkeysHex) {
-        logger.info(pubkeyHex);
-      }
+      signers.push({type: SignerType.Remote, pubkeyHex: pubkeyHex, externalSignerUrl});
     }
   }
 
   // Read local keys
   else {
     const {secretKeys, unlockSecretKeys} = await getLocalSecretKeys(args);
-    if (secretKeys.length > 0) {
-      // Log pubkeys for auditing
-      logger.info(`Decrypted ${secretKeys.length} local keystores`);
-      for (const secretKey of secretKeys) {
-        logger.info(secretKey.toPublicKey().toHex());
-        signers.push({
-          type: SignerType.Local,
-          secretKey,
-        });
-      }
-
-      if (unlockSecretKeys) {
-        onGracefulShutdownCbs.push(() => unlockSecretKeys());
-      }
+    for (const secretKey of secretKeys) {
+      signers.push({type: SignerType.Local, secretKey});
     }
 
-    const remoteSigners: SignerDefinition[] = readRemoteSignerDefinitions();
-    if (remoteSigners.length > 0) {
-      logger.info(`Using ${secretKeys.length} external keys from disk`);
-      for (const remoteSigner of remoteSigners) {
-        signers.push({
-          type: SignerType.Remote,
-          pubkeyHex: remoteSigner.pubkey,
-          externalSignerUrl: remoteSigner.url,
-        });
-      }
+    if (unlockSecretKeys) {
+      onGracefulShutdownCbs.push(unlockSecretKeys);
+    }
 
-      // Log pubkeys for auditing, grouped by signer URL
-      for (const {externalSignerUrl, pubkeysHex} of groupExternalSignersByUrl(remoteSigners)) {
-        logger.info(`External signer URL: ${externalSignerUrl}`);
-        for (const pubkeyHex of pubkeysHex) {
-          logger.info(pubkeyHex);
-        }
-      }
+    const remoteSigners: SignerDefinition[] = readRemoteSignerDefinitions(firstImportKeystorePath);
+    for (const remoteSigner of remoteSigners) {
+      signers.push({type: SignerType.Remote, pubkeyHex: remoteSigner.pubkey, externalSignerUrl: remoteSigner.url});
     }
   }
 
   // Ensure the validator has at least one key
-
   if (signers.length === 0) {
     throw new YargsError("No signers found with current args");
   }
+
+  logSigners(logger, signers);
 
   // This AbortController interrupts the sleep() calls when waiting for genesis
   const controller = new AbortController();
@@ -170,7 +160,10 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     // KeymanagerApi must ensure that the path is a directory and not a file
     const firstImportKeystorePath = args.importKeystoresPath[0];
 
-    const keymanagerApi = new KeymanagerApi(validator, firstImportKeystorePath);
+    const keymanagerApi = new KeymanagerApi(validator, {
+      importedKeystoresDirpath,
+      importedRemoteSignersDirpath,
+    });
 
     const keymanagerServer = new KeymanagerServer(
       {
@@ -184,5 +177,38 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     );
     onGracefulShutdownCbs.push(() => keymanagerServer.close());
     await keymanagerServer.listen();
+  }
+}
+
+/**
+ * Log each pubkeys for auditing out keys are loaded from the logs
+ */
+function logSigners(logger: ILogger, signers: Signer[]): void {
+  const localSigners: SignerLocal[] = [];
+  const remoteSigners: SignerRemote[] = [];
+
+  for (const signer of signers) {
+    switch (signer.type) {
+      case SignerType.Local:
+        localSigners.push(signer);
+        break;
+      case SignerType.Remote:
+        remoteSigners.push(signer);
+        break;
+    }
+  }
+
+  if (localSigners.length > 0) {
+    logger.info(`Decrypted ${localSigners.length} local keystores`);
+    for (const signer of localSigners) {
+      logger.info(signer.secretKey.toPublicKey().toHex());
+    }
+  }
+
+  for (const {externalSignerUrl, pubkeysHex} of groupExternalSignersByUrl(remoteSigners)) {
+    logger.info(`External signers on URL: ${externalSignerUrl}`);
+    for (const pubkeyHex of pubkeysHex) {
+      logger.info(pubkeyHex);
+    }
   }
 }
