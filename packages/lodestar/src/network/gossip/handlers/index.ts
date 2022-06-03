@@ -1,5 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
-import PeerId from "peer-id";
+import {peerIdFromString} from "@libp2p/peer-id";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {ILogger, prettyBytes} from "@chainsafe/lodestar-utils";
@@ -134,11 +134,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
               case BlockErrorCode.EXECUTION_ENGINE_ERROR:
                 break;
               default:
-                network.reportPeer(
-                  PeerId.createFromB58String(peerIdStr),
-                  PeerAction.LowToleranceError,
-                  "BadGossipBlock"
-                );
+                network.reportPeer(peerIdFromString(peerIdStr), PeerAction.LowToleranceError, "BadGossipBlock");
             }
           }
           logger.error("Error receiving block", {slot, peer: peerIdStr}, e as Error);

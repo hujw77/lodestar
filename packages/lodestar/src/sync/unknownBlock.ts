@@ -7,7 +7,8 @@ import {IBeaconChain} from "../chain/index.js";
 import {IMetrics} from "../metrics/index.js";
 import {shuffle} from "../util/shuffle.js";
 import {byteArrayEquals} from "../util/bytes.js";
-import PeerId from "peer-id";
+import {PeerId} from "@libp2p/interfaces/peer-id";
+import {peerIdFromString} from "@libp2p/peer-id";
 import {BlockError, BlockErrorCode} from "../chain/errors/index.js";
 import {wrapError} from "../util/wrapError.js";
 import {pruneSetToMax} from "../util/map.js";
@@ -257,11 +258,11 @@ export class UnknownBlockSync {
           throw Error(`Wrong block received by peer, expected ${toHexString(receivedBlockRoot)} got ${blockRootHex}`);
         }
 
-        return {signedBlock, peerIdStr: peer.toB58String()};
+        return {signedBlock, peerIdStr: peer.toString()};
       } catch (e) {
         this.logger.debug(
           "Error fetching UnknownBlockRoot",
-          {attempt: i, blockRootHex, peer: peer.toB58String()},
+          {attempt: i, blockRootHex, peer: peer.toString()},
           e as Error
         );
         lastError = e as Error;
@@ -295,7 +296,7 @@ export class UnknownBlockSync {
 
       for (const peerIdStr of block.peerIdStrs) {
         // TODO: Refactor peerRpcScores to work with peerIdStr only
-        const peer = PeerId.createFromB58String(peerIdStr);
+        const peer = peerIdFromString(peerIdStr);
         this.network.reportPeer(peer, PeerAction.LowToleranceError, "BadBlockByRoot");
       }
     }

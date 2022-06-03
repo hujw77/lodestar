@@ -8,7 +8,7 @@ import {formatProtocolId, parseProtocolId} from "../../../src/network/reqresp/ut
 import {createNodeJsLibp2p, isLocalMultiAddr} from "../../../src/network/index.js";
 import {getCurrentAndNextFork} from "../../../src/network/forks.js";
 import {ENR} from "@chainsafe/discv5";
-import PeerId from "peer-id";
+import {PeerId} from "@libp2p/interfaces/peer-id";
 
 async function createPeerId(): Promise<PeerId> {
   return await PeerId.create({keyType: "secp256k1"});

@@ -7,8 +7,9 @@ import {allForks, altair, phase0} from "@chainsafe/lodestar-types";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {EventEmitter} from "events";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import LibP2p from "libp2p";
-import {GossipsubMessage, MessageAcceptance, PeerIdStr} from "libp2p-gossipsub/src/types";
+import {Libp2p} from "libp2p";
+import {MessageAcceptance, PeerIdStr} from "@chainsafe/libp2p-gossipsub/types";
+import {Message} from "@libp2p/interfaces/pubsub";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconChain} from "../../chain/index.js";
 import {NetworkEvent} from "../events.js";
@@ -98,7 +99,7 @@ export type GossipEventEmitter = StrictEventEmitter<EventEmitter, IGossipEvents>
 
 export interface IGossipModules {
   config: IBeaconConfig;
-  libp2p: LibP2p;
+  libp2p: Libp2p;
   logger: ILogger;
   chain: IBeaconChain;
 }
@@ -116,7 +117,7 @@ export interface IGossipModules {
  */
 export type GossipValidatorFn = (
   topic: GossipTopic,
-  msg: GossipsubMessage,
+  msg: Message,
   propagationSource: PeerIdStr,
   seenTimestampSec: number
 ) => Promise<MessageAcceptance>;

@@ -15,7 +15,7 @@ describe("sync / UnknownBlockSync", () => {
 
   it("fetch and process multiple unknown block parents", async () => {
     const peer = getValidPeerId();
-    const peerIdStr = peer.toB58String();
+    const peerIdStr = peer.toString();
     const blockA = ssz.phase0.SignedBeaconBlock.defaultValue();
     const blockB = ssz.phase0.SignedBeaconBlock.defaultValue();
     const blockC = ssz.phase0.SignedBeaconBlock.defaultValue();

@@ -1,6 +1,6 @@
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
-import PeerId from "peer-id";
+import {PeerId} from "@libp2p/interfaces/peer-id";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {IPeerRpcScoreStore, PeerAction, PeerRpcScoreStore} from "../../../../../src/network/index.js";
 import {defaultNetworkOptions} from "../../../../../src/network/options.js";

@@ -3,19 +3,15 @@
  * @module network
  */
 
-import PeerId from "peer-id";
-import {Multiaddr} from "multiaddr";
+import {PeerId} from "@libp2p/interfaces/peer-id";
+import {Multiaddr} from "@multiformats/multiaddr";
 import {networkInterfaces} from "node:os";
 import {ENR} from "@chainsafe/discv5";
+import {Connection} from "@libp2p/interfaces/connection";
+import {ConnectionManager} from "@libp2p/interfaces/connection-manager";
+import {DefaultConnectionManager} from "libp2p/connection-manager";
 
 // peers
-
-/**
- * Return a fresh PeerId instance
- */
-export async function createPeerId(): Promise<PeerId> {
-  return await PeerId.create({bits: 256, keyType: "secp256k1"});
-}
 
 /**
  * Check if multiaddr belongs to the local network interfaces.
@@ -64,6 +60,18 @@ export function clearMultiaddrUDP(enr: ENR): void {
 }
 
 export function prettyPrintPeerId(peerId: PeerId): string {
-  const id = peerId.toB58String();
+  const id = peerId.toString();
   return `${id.substr(0, 2)}...${id.substr(id.length - 6, id.length)}`;
+}
+
+/**
+ * Compat function for type mismatch reasons
+ */
+export function getConnectionsMap(connectionManager: ConnectionManager): Map<string, Connection[]> {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+  return (connectionManager as DefaultConnectionManager)["connections"] as Map<string, Connection[]>;
+}
+
+export function getConnection(connectionManager: ConnectionManager, peerIdStr: string): Connection | undefined {
+  return getConnectionsMap(connectionManager).get(peerIdStr)?.[0] ?? undefined;
 }

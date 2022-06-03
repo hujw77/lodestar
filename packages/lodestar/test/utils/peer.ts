@@ -1,4 +1,4 @@
-import PeerId from "peer-id";
+import {PeerId} from "@libp2p/interfaces/peer-id";
 
 /**
  * Returns a valid PeerId with opts `bits: 256, keyType: "secp256k1"`

@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import PeerId from "peer-id";
+import {PeerId} from "@libp2p/interfaces/peer-id";
 import {PeerMap, PeerSet} from "../../../src/util/peerMap.js";
 
 describe("util / peerMap", () => {

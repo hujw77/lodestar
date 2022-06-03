@@ -2,9 +2,9 @@
  * @module network/nodejs
  */
 
-import PeerId from "peer-id";
-import LibP2p from "libp2p";
-import {NodejsNode} from "./bundle.js";
+import {PeerId} from "@libp2p/interfaces/peer-id";
+import {Libp2p} from "libp2p";
+import {createNodejsLibp2p as _createNodejsLibp2p} from "./bundle.js";
 import {defaultDiscv5Options, defaultNetworkOptions, INetworkOptions} from "../options.js";
 import {ENR} from "@chainsafe/discv5";
 import {Eth2PeerDataStore} from "../peers/datastore.js";
@@ -25,7 +25,7 @@ export async function createNodeJsLibp2p(
   peerIdOrPromise: PeerId | Promise<PeerId>,
   networkOpts: Partial<INetworkOptions> = {},
   nodeJsLibp2pOpts: NodeJsLibp2pOpts = {}
-): Promise<LibP2p> {
+): Promise<Libp2p> {
   const peerId = await Promise.resolve(peerIdOrPromise);
   const localMultiaddrs = networkOpts.localMultiaddrs || defaultNetworkOptions.localMultiaddrs;
   const bootMultiaddrs = networkOpts.bootMultiaddrs || defaultNetworkOptions.bootMultiaddrs;
@@ -66,7 +66,7 @@ export async function createNodeJsLibp2p(
     }
   }
 
-  return new NodejsNode({
+  return _createNodejsLibp2p({
     peerId,
     addresses: {listen: localMultiaddrs},
     datastore,

@@ -1,10 +1,10 @@
 /**
  * @module network
  */
-import {Connection} from "libp2p";
+import {Connection} from "@libp2p/interfaces/connection";
 import {Discv5, ENR} from "@chainsafe/discv5";
-import {Multiaddr} from "multiaddr";
-import PeerId from "peer-id";
+import {Multiaddr} from "@multiformats/multiaddr";
+import {PeerId} from "@libp2p/interfaces/peer-id";
 import {INetworkEventBus} from "./events.js";
 import {Eth2Gossipsub} from "./gossip/index.js";
 import {MetadataController} from "./metadata.js";
