@@ -10,7 +10,7 @@ import {processProposerSlashing} from "./processProposerSlashing.js";
 
 export function processOperations(
   state: CachedBeaconStateBellatrix,
-  body: bellatrix.BeaconBlockBody,
+  body: bellatrix.BeaconBlockBody | bellatrix.BlindedBeaconBlockBody,
   verifySignatures = true
 ): void {
   // verify that outstanding deposits are processed up to the maximum number of deposits

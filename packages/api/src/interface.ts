@@ -6,6 +6,7 @@ import {Api as LightclientApi} from "./routes/lightclient.js";
 import {Api as LodestarApi} from "./routes/lodestar.js";
 import {Api as NodeApi} from "./routes/node.js";
 import {Api as ValidatorApi} from "./routes/validator.js";
+import {Api as BuilderApi} from "./routes/builder.js";
 
 export type Api = {
   beacon: BeaconApi;
@@ -17,6 +18,8 @@ export type Api = {
   node: NodeApi;
   validator: ValidatorApi;
 };
+
+export {BuilderApi};
 
 // Declare namespaces for CLI options
 export type ApiNamespace = keyof Api;

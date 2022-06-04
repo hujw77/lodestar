@@ -125,7 +125,7 @@ export class Validator {
     );
 
     this.prepareBeaconProposerService = defaultFeeRecipient
-      ? new PrepareBeaconProposerService(loggerVc, api, clock, validatorStore, indicesService, metrics)
+      ? new PrepareBeaconProposerService(config, loggerVc, api, clock, validatorStore, indicesService, metrics)
       : null;
 
     this.config = config;

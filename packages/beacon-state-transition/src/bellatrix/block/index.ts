@@ -14,7 +14,7 @@ export {processOperations, processAttesterSlashing, processProposerSlashing, pro
 
 export function processBlock(
   state: CachedBeaconStateBellatrix,
-  block: bellatrix.BeaconBlock,
+  block: bellatrix.BeaconBlock | bellatrix.BlindedBeaconBlock,
   verifySignatures = true,
   executionEngine: ExecutionEngine | null
 ): void {
@@ -22,7 +22,12 @@ export function processBlock(
   // The call to the process_execution_payload must happen before the call to the process_randao as the former depends
   // on the randao_mix computed with the reveal of the previous block.
   if (isExecutionEnabled(state, block.body)) {
-    processExecutionPayload(state, block.body.executionPayload, executionEngine);
+    processExecutionPayload(
+      state,
+      (block.body as bellatrix.BeaconBlockBody).executionPayload ??
+        (block.body as bellatrix.BlindedBeaconBlockBody).executionPayloadHeader,
+      executionEngine
+    );
   }
 
   processRandao(state, block, verifySignatures);

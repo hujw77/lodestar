@@ -96,7 +96,7 @@ export function stateTransition(
  */
 export function processBlock(
   postState: CachedBeaconStateAllForks,
-  block: allForks.BeaconBlock,
+  block: allForks.BeaconBlock | bellatrix.BlindedBeaconBlock,
   options?: {verifySignatures?: boolean},
   metrics?: IBeaconStateTransitionMetrics | null
 ): void {

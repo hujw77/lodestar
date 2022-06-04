@@ -1,7 +1,8 @@
 import {toHexString, byteArrayEquals} from "@chainsafe/ssz";
-import {allForks, ssz} from "@chainsafe/lodestar-types";
+import {allForks, ssz, bellatrix} from "@chainsafe/lodestar-types";
 import {CachedBeaconStateAllForks} from "../../types.js";
 import {ZERO_HASH} from "../../constants/index.js";
+import {isBellatrixBlindedBlockBodyType} from "../../bellatrix/utils.js";
 
 /**
  * Converts a Deposit record (created by the eth-execution deposit contract) into a Validator object that goes into the eth-consensus state.
@@ -9,7 +10,10 @@ import {ZERO_HASH} from "../../constants/index.js";
  * PERF: Fixed work independent of block contents.
  * NOTE: `block` body root MUST be pre-cached.
  */
-export function processBlockHeader(state: CachedBeaconStateAllForks, block: allForks.BeaconBlock): void {
+export function processBlockHeader(
+  state: CachedBeaconStateAllForks,
+  block: allForks.BeaconBlock | bellatrix.BlindedBeaconBlock
+): void {
   const slot = state.slot;
   // verify that the slots match
   if (block.slot !== slot) {
@@ -43,7 +47,9 @@ export function processBlockHeader(state: CachedBeaconStateAllForks, block: allF
     proposerIndex: block.proposerIndex,
     parentRoot: block.parentRoot,
     stateRoot: ZERO_HASH,
-    bodyRoot: types.BeaconBlockBody.hashTreeRoot(block.body),
+    bodyRoot: isBellatrixBlindedBlockBodyType(block.body)
+      ? ssz.bellatrix.BlindedBeaconBlockBody.hashTreeRoot(block.body as bellatrix.BlindedBeaconBlockBody)
+      : types.BeaconBlockBody.hashTreeRoot(block.body),
   });
 
   // verify proposer is not slashed. Only once per block, may use the slower read from tree

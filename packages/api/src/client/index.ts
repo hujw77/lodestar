@@ -1,5 +1,5 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {Api} from "../interface.js";
+import {Api, BuilderApi} from "../interface.js";
 import {IHttpClient, HttpClient, HttpClientOptions, HttpClientModules, HttpError} from "./utils/index.js";
 export {HttpClient, HttpClientOptions, HttpError};
 
@@ -11,6 +11,7 @@ import * as lightclient from "./lightclient.js";
 import * as lodestar from "./lodestar.js";
 import * as node from "./node.js";
 import * as validator from "./validator.js";
+import * as builder from "./builder.js";
 
 type ClientModules = HttpClientModules & {
   config: IChainForkConfig;
@@ -20,7 +21,7 @@ type ClientModules = HttpClientModules & {
 /**
  * REST HTTP client for all routes
  */
-export function getClient(opts: HttpClientOptions, modules: ClientModules): Api {
+export function getClient(opts: HttpClientOptions, modules: ClientModules): Api & {builder: BuilderApi} {
   const {config} = modules;
   const httpClient = modules.httpClient ?? new HttpClient(opts, modules);
 
@@ -33,5 +34,6 @@ export function getClient(opts: HttpClientOptions, modules: ClientModules): Api 
     lodestar: lodestar.getClient(config, httpClient),
     node: node.getClient(config, httpClient),
     validator: validator.getClient(config, httpClient),
+    builder: builder.getClient(config, httpClient),
   };
 }
