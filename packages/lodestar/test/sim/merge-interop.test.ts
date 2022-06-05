@@ -9,8 +9,8 @@ import {IChainConfig} from "@chainsafe/lodestar-config";
 import {Epoch} from "@chainsafe/lodestar-types";
 import {bellatrix} from "@chainsafe/lodestar-beacon-state-transition";
 
-import {ExecutePayloadStatus} from "../../src/executionEngine/interface.js";
-import {ExecutionEngineHttp} from "../../src/executionEngine/http.js";
+import {ExecutePayloadStatus} from "../../src/execution/engine/interface.js";
+import {ExecutionEngineHttp} from "../../src/execution/engine/http.js";
 import {ChainEvent} from "../../src/chain/index.js";
 import {testLogger, TestLoggerOpts} from "../utils/logger.js";
 import {getDevBeaconNode} from "../utils/node/beacon.js";
