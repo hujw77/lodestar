@@ -33,7 +33,7 @@ import {
 } from "../../../../src/chain/opPools/index.js";
 import {LightClientServer} from "../../../../src/chain/lightClient/index.js";
 import {Eth1ForBlockProductionDisabled} from "../../../../src/eth1/index.js";
-import {ExecutionEngineDisabled} from "../../../../src/executionEngine/index.js";
+import {ExecutionEngineDisabled} from "../../../../src/execution/engine/index.js";
 import {ReqRespBlockResponse} from "../../../../src/network/reqresp/types.js";
 import {testLogger} from "../../logger.js";
 import {ReprocessController} from "../../../../src/chain/reprocess.js";

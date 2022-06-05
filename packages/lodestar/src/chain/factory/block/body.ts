@@ -29,7 +29,7 @@ import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {toHex} from "@chainsafe/lodestar-utils";
 
 import {IBeaconChain} from "../../interface.js";
-import {PayloadId, IExecutionEngine, IExecutionBuilder} from "../../../executionEngine/interface.js";
+import {PayloadId, IExecutionEngine, IExecutionBuilder} from "../../../execution/index.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../../constants/index.js";
 import {IEth1ForBlockProduction} from "../../../eth1/index.js";
 import {numToQuantity} from "../../../eth1/provider/utils.js";

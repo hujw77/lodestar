@@ -14,7 +14,7 @@ import {
   ExecutionEngineOpts,
   ExecutionBuilderOpts,
   defaultExecutionBuilderOpts,
-} from "../executionEngine/index.js";
+} from "../execution/index.js";
 import {defaultLoggerOptions, IBeaconLoggerOptions} from "./loggerOptions.js";
 // Re-export so the CLI doesn't need to depend on lodestar-api
 export {allNamespaces} from "../api/rest/index.js";

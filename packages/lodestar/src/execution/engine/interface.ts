@@ -1,4 +1,4 @@
-import {bellatrix, Root, RootHex, Slot, BLSPubkey} from "@chainsafe/lodestar-types";
+import {bellatrix, Root, RootHex} from "@chainsafe/lodestar-types";
 import {PayloadIdCache, PayloadId, ApiPayloadAttributes} from "./payloadIdCache.js";
 
 export {PayloadIdCache, PayloadId, ApiPayloadAttributes};
@@ -93,10 +93,4 @@ export interface IExecutionEngine {
    * https://github.com/ethereum/consensus-specs/blob/dev/specs/merge/validator.md#get_payload
    */
   getPayload(payloadId: PayloadId): Promise<bellatrix.ExecutionPayload>;
-}
-
-export interface IExecutionBuilder {
-  registerValidator(registrations: bellatrix.SignedValidatorRegistrationV1[]): Promise<void>;
-  getPayloadHeader(slot: Slot, parentHash: Root, proposerPubKey: BLSPubkey): Promise<bellatrix.ExecutionPayloadHeader>;
-  submitSignedBlindedBlock(signedBlock: bellatrix.SignedBlindedBeaconBlock): Promise<bellatrix.SignedBeaconBlock>;
 }

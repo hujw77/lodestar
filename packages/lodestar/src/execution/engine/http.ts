@@ -2,7 +2,7 @@ import {bellatrix, RootHex, Root} from "@chainsafe/lodestar-types";
 import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
 import {fromHex} from "@chainsafe/lodestar-utils";
 
-import {ErrorJsonRpcResponse, HttpRpcError, JsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient.js";
+import {ErrorJsonRpcResponse, HttpRpcError, JsonRpcHttpClient} from "../../eth1/provider/jsonRpcHttpClient.js";
 import {
   bytesToData,
   numToQuantity,
@@ -11,8 +11,8 @@ import {
   DATA,
   QUANTITY,
   quantityToBigint,
-} from "../eth1/provider/utils.js";
-import {IJsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient.js";
+} from "../../eth1/provider/utils.js";
+import {IJsonRpcHttpClient} from "../../eth1/provider/jsonRpcHttpClient.js";
 import {
   ExecutePayloadStatus,
   ExecutePayloadResponse,

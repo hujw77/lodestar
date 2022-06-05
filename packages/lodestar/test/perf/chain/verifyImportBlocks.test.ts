@@ -11,7 +11,7 @@ import {
 } from "../../../../beacon-state-transition/test/utils/index.js";
 import {rangeSyncTest} from "../../../../beacon-state-transition/test/perf/params.js";
 import {BeaconChain} from "../../../src/chain/index.js";
-import {ExecutionEngineDisabled} from "../../../src/executionEngine/index.js";
+import {ExecutionEngineDisabled} from "../../../src/execution/engine/index.js";
 import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
 import {testLogger} from "../../utils/logger.js";
 import {linspace} from "../../../src/util/numpy.js";

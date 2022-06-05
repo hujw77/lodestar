@@ -5,7 +5,6 @@ export type ExecutionBuilderArgs = {
   "builder.enabled": boolean;
   "builder.urls": string[];
   "builder.timeout": number;
-  "builder.jwt-secret"?: string;
 };
 
 export function parseArgs(args: ExecutionBuilderArgs): IBeaconNodeOptions["executionBuilder"] {
@@ -38,13 +37,6 @@ export const options: ICliCommandOptions<ExecutionBuilderArgs> = {
     type: "number",
     defaultDescription:
       defaultOptions.executionBuilder.mode === "http" ? String(defaultOptions.executionBuilder.timeout) : "",
-    group: "builder",
-  },
-
-  "builder.jwt-secret": {
-    description:
-      "File path to a shared hex-encoded jwt secret which will be used to generate and bundle HS256 encoded jwt tokens for authentication with the builder",
-    type: "string",
     group: "builder",
   },
 };
