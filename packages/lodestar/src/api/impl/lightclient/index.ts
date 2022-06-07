@@ -7,7 +7,6 @@ import {ProofType, Tree} from "@chainsafe/persistent-merkle-tree";
 import {IApiOptions} from "../../options.js";
 
 // TODO: Import from lightclient/server package
-
 export function getLightclientApi(
   opts: IApiOptions,
   {chain, config, db}: Pick<ApiModules, "chain" | "config" | "db">
@@ -18,7 +17,7 @@ export function getLightclientApi(
 
   return {
     async getStateProof(stateId, jsonPaths) {
-      const state = await resolveStateId(config, chain, db, stateId);
+      const state = await resolveStateId(config, chain, db, stateId, {regenFinalizedState: true});
 
       // Commit any changes before computing the state root. In normal cases the state should have no changes here
       state.commit();
@@ -34,11 +33,18 @@ export function getLightclientApi(
         throw new Error("Requested proof is too large.");
       }
 
+      let it = gindicesSet.values()
+      let first = it.next()
+
+      let proof = tree.getProof({
+          //type: ProofType.treeOffset,
+          //gindices: Array.from(gindicesSet),
+          type: ProofType.single,
+          gindex: first.value,
+      })
+      console.log(proof)
       return {
-        data: tree.getProof({
-          type: ProofType.treeOffset,
-          gindices: Array.from(gindicesSet),
-        }),
+        data: proof,
       };
     },
 
