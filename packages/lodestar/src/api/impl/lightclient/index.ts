@@ -42,7 +42,7 @@ export function getLightclientApi(
           type: ProofType.single,
           gindex: first.value,
       })
-      console.log(proof)
+
       return {
         data: proof,
       };
