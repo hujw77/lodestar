@@ -6,9 +6,8 @@ on:
 
 jobs:
   docker:
-    name: Publish to Docker Hub
+    name: Publish docker image
     runs-on: ubuntu-latest
-    if: needs.tag.outputs.is_rc == 'true'
     steps:
       - uses: actions/checkout@v2
       - run: scripts/await-release.sh ${{ needs.tag.outputs.tag }} rc 900
@@ -35,14 +34,3 @@ jobs:
           push: true
           tags: ghcr.io/${{ github.repository }}:sha-${{ env.SHA }}
           file: docker/from_source.Dockerfile
-
-      # - name: Build and push
-      #   run: |
-      #     docker buildx build \
-      #       --push \
-      #       --file docker/from_source.Dockerfile \
-      #       --tag chainsafe/lodestar:rc \
-      #       --tag chainsafe/lodestar:${{ needs.tag.outputs.tag }} \
-      #       --platform linux/amd64 \
-      #       --build-arg VERSION=${{ needs.tag.outputs.tag }} \
-      #       .
