@@ -34,6 +34,8 @@ export type Api = {
    * The requested `stateId` may not be available. Regular nodes only keep recent states in memory.
    */
   getStateProof(stateId: string, jsonPaths: JsonPath[]): Promise<{data: Proof}>;
+
+  getStateSingleProof(stateId: string, gindex: number): Promise<{data: Proof}>;
   /**
    * Returns an array of best updates in the requested periods within the inclusive range `from` - `to`.
    * Best is defined by (in order of priority):
@@ -61,6 +63,7 @@ export type Api = {
  */
 export const routesData: RoutesData<Api> = {
   getStateProof: {url: "/eth/v1/lightclient/proof/:stateId", method: "GET"},
+  getStateSingleProof: {url: "/eth/v1/lightclient/single_proof/:stateId", method: "GET"},
   getCommitteeUpdates: {url: "/eth/v1/lightclient/committee_updates", method: "GET"},
   getLatestHeadUpdate: {url: "/eth/v1/lightclient/latest_head_update/", method: "GET"},
   getLatestFinalizedHeadUpdate: {url: "/eth/v1/lightclient/latest_finalized_head_update/", method: "GET"},
@@ -69,6 +72,7 @@ export const routesData: RoutesData<Api> = {
 
 export type ReqTypes = {
   getStateProof: {params: {stateId: string}; query: {paths: string[]}};
+  getStateSingleProof: {params: {stateId: string}; query: {gindex: number}};
   getCommitteeUpdates: {query: {from: number; to: number}};
   getLatestHeadUpdate: ReqEmpty;
   getLatestFinalizedHeadUpdate: ReqEmpty;
@@ -81,6 +85,12 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       writeReq: (stateId, paths) => ({params: {stateId}, query: {paths: querySerializeProofPathsArr(paths)}}),
       parseReq: ({params, query}) => [params.stateId, queryParseProofPathsArr(query.paths)],
       schema: {params: {stateId: Schema.StringRequired}, body: Schema.AnyArray},
+    },
+
+    getStateProof: {
+      writeReq: (stateId, gindex) => ({params: {stateId}, query: {gindex}}),
+      parseReq: ({params, query}) => [params.stateId, query.gindex],
+      schema: {params: {stateId: Schema.StringRequired}, body: Schema.UintRequired},
     },
 
     getCommitteeUpdates: {
@@ -131,6 +141,7 @@ export function getReturnTypes(): ReturnTypes<Api> {
   return {
     // Just sent the proof JSON as-is
     getStateProof: sameType(),
+    getStateSingleProof: sameType(),
     getCommitteeUpdates: ContainerData(ArrayOf(ssz.altair.LightClientUpdate)),
     getLatestHeadUpdate: ContainerData(lightclientHeaderUpdate),
     getLatestFinalizedHeadUpdate: ContainerData(lightclientFinalizedUpdate),

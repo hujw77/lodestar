@@ -17,7 +17,7 @@ export function getLightclientApi(
 
   return {
     async getStateProof(stateId, jsonPaths) {
-      const state = await resolveStateId(config, chain, db, stateId, {regenFinalizedState: true});
+      const state = await resolveStateId(config, chain, db, stateId);
 
       // Commit any changes before computing the state root. In normal cases the state should have no changes here
       state.commit();
@@ -33,18 +33,27 @@ export function getLightclientApi(
         throw new Error("Requested proof is too large.");
       }
 
-      let it = gindicesSet.values()
-      let first = it.next()
+      return {
+        data: tree.getProof({
+          type: ProofType.treeOffset,
+          gindices: Array.from(gindicesSet),
+        }),
+      };
+    },
 
-      let proof = tree.getProof({
-          //type: ProofType.treeOffset,
-          //gindices: Array.from(gindicesSet),
-          type: ProofType.single,
-          gindex: first.value,
-      })
+    async getStateSingleProof(stateId, gindex) {
+      const state = await resolveStateId(config, chain, db, stateId, {regenFinalizedState: true});
+
+      // Commit any changes before computing the state root. In normal cases the state should have no changes here
+      state.commit();
+      const stateNode = state.node;
+      const tree = new Tree(stateNode);
 
       return {
-        data: proof,
+        data: tree.getProof({
+          type: ProofType.single,
+          gindex: gindex,
+        }),
       };
     },
 
