@@ -90,9 +90,7 @@ export function getSyncCommitteeSignatureSet(
     }
   }
 
-  console.log(1, previousSlot)
   const domain = state.config.getDomain(DOMAIN_SYNC_COMMITTEE, previousSlot);
-  console.log(2, toHexString(domain))
 
   return {
     type: SignatureSetType.aggregate,
