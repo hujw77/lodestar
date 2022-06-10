@@ -87,7 +87,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       schema: {params: {stateId: Schema.StringRequired}, body: Schema.AnyArray},
     },
 
-    getStateProof: {
+    getStateSingleProof: {
       writeReq: (stateId, gindex) => ({params: {stateId}, query: {gindex}}),
       parseReq: ({params, query}) => [params.stateId, query.gindex],
       schema: {params: {stateId: Schema.StringRequired}, body: Schema.UintRequired},
