@@ -3,7 +3,7 @@ import {resolveStateId} from "../beacon/state/utils.js";
 import {routes} from "@chainsafe/lodestar-api";
 import {linspace} from "../../../util/numpy.js";
 import {fromHexString} from "@chainsafe/ssz";
-import {ProofType, Tree, Gindex} from "@chainsafe/persistent-merkle-tree";
+import {ProofType, Tree} from "@chainsafe/persistent-merkle-tree";
 import {IApiOptions} from "../../options.js";
 
 // TODO: Import from lightclient/server package
@@ -52,7 +52,7 @@ export function getLightclientApi(
       return {
         data: tree.getProof({
           type: ProofType.single,
-          gindex: Gindex(gindex),
+          gindex: BigInt(gindex),
         }),
       };
     },
