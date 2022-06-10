@@ -1,6 +1,6 @@
 import {altair, ssz} from "@chainsafe/lodestar-types";
 import {DOMAIN_SYNC_COMMITTEE} from "@chainsafe/lodestar-params";
-import {byteArrayEquals} from "@chainsafe/ssz";
+import {byteArrayEquals, toHexString} from "@chainsafe/ssz";
 
 import {
   computeSigningRoot,
@@ -93,9 +93,7 @@ export function getSyncCommitteeSignatureSet(
   console.log(1, previousSlot)
   console.log(DOMAIN_SYNC_COMMITTEE)
   const domain = state.config.getDomain(DOMAIN_SYNC_COMMITTEE, previousSlot);
-  console.log(2, domain)
-  console.log(3, ssz.Root)
-  console.log(4, computeSigningRoot(ssz.Root, rootSigned, domain))
+  console.log(2, toHexString(domain))
 
   return {
     type: SignatureSetType.aggregate,
