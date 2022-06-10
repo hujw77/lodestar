@@ -91,7 +91,6 @@ export function getSyncCommitteeSignatureSet(
   }
 
   console.log(1, previousSlot)
-  console.log(DOMAIN_SYNC_COMMITTEE)
   const domain = state.config.getDomain(DOMAIN_SYNC_COMMITTEE, previousSlot);
   console.log(2, toHexString(domain))
 
