@@ -1,4 +1,3 @@
-import {AbortController} from "@chainsafe/abort-controller";
 import {expect} from "chai";
 import sinon from "sinon";
 import bls from "@chainsafe/bls";
@@ -48,7 +47,7 @@ describe("BlockDutiesService", function () {
     api.validator.getProposerDuties.resolves(duties);
 
     const clock = new ClockMock();
-    const blockService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, null, {});
+    const blockService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, null, {builder: {}});
 
     const signedBlock = generateEmptySignedBlock();
     validatorStore.signRandao.resolves(signedBlock.message.body.randaoReveal);

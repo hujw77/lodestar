@@ -1,12 +1,11 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {fastify} from "fastify";
-import {AbortController} from "@chainsafe/abort-controller";
 import {
   ExecutionEngineHttp,
   parseExecutionPayload,
   serializeExecutionPayload,
-} from "../../../src/executionEngine/http.js";
+} from "../../../src/execution/engine/http.js";
 
 chai.use(chaiAsPromised);
 
@@ -141,6 +140,7 @@ describe("ExecutionEngine / http", () => {
 
     await executionEngine.notifyForkchoiceUpdate(
       forkChoiceHeadData.headBlockHash,
+      forkChoiceHeadData.safeBlockHash,
       forkChoiceHeadData.finalizedBlockHash
     );
 

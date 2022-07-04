@@ -1,10 +1,9 @@
-import {ErrorAborted, TimeoutError} from "@chainsafe/lodestar-utils";
-import {AbortController} from "@chainsafe/abort-controller";
+import {IncomingMessage} from "node:http";
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import fastify, {RouteOptions} from "fastify";
-import {IncomingMessage} from "node:http";
-import {HttpClient, HttpError} from "../../../src/client/utils/index.js";
+import {ErrorAborted, TimeoutError} from "@chainsafe/lodestar-utils";
+import {HttpClient, HttpError} from "../../../src/utils/client/index.js";
 
 chai.use(chaiAsPromised);
 
