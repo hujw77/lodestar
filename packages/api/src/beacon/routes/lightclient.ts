@@ -62,8 +62,8 @@ export type Api = {
  * Define javascript values for each route
  */
 export const routesData: RoutesData<Api> = {
-  getStateProof: {url: "/eth/v1/lightclient/proof/:stateId", method: "GET"},
-  getStateSingleProof: {url: "/eth/v1/lightclient/single_proof/:stateId", method: "GET"},
+  getStateProof: {url: "/eth/v1/light_client/proof/:stateId", method: "GET"},
+  getStateSingleProof: {url: "/eth/v1/light_client/single_proof/:stateId", method: "GET"},
   getUpdates: {url: "/eth/v1/light_client/updates", method: "GET"},
   getOptimisticUpdate: {url: "/eth/v1/light_client/optimistic_update/", method: "GET"},
   getFinalityUpdate: {url: "/eth/v1/light_client/finality_update/", method: "GET"},
