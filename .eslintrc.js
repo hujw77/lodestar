@@ -31,6 +31,13 @@ module.exports = {
       "error",
       {
         groups: ["builtin", "external", "internal", "parent", "sibling", "index"],
+        pathGroups: [
+          {
+            pattern: "@lodestar/**",
+            group: "internal",
+          },
+        ],
+        pathGroupsExcludedImportTypes: ["builtin"],
       },
     ],
     "@typescript-eslint/await-thenable": "error",
@@ -77,7 +84,7 @@ module.exports = {
     ],
     "@typescript-eslint/func-call-spacing": "error",
     // TODO after upgrading es-lint, member-ordering is now leading to lint errors. Set to warning now and fix in another PR
-    "@typescript-eslint/member-ordering": "warn",
+    "@typescript-eslint/member-ordering": "off",
     "@typescript-eslint/no-explicit-any": "error",
     "@typescript-eslint/no-require-imports": "error",
     "@typescript-eslint/no-unused-vars": [
@@ -178,6 +185,20 @@ module.exports = {
     ],
   },
   overrides: [
+    {
+      files: ["**/*.config.js", "**/*.config.mjs", "**/*.config.cjs", "**/*.config.ts"],
+      rules: {
+        // Allow importing packages from dev dependencies
+        "import/no-extraneous-dependencies": "off",
+        // Allow importing and mixing different configurations
+        "import/no-relative-packages": "off",
+        "@typescript-eslint/naming-convention": "off",
+        // Allow require in CJS modules
+        "@typescript-eslint/no-var-requires": "off",
+        // Allow require in CJS modules
+        "@typescript-eslint/no-require-imports": "off",
+      },
+    },
     {
       files: ["**/test/**/*.ts"],
       rules: {

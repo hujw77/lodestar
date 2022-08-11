@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import {defaultOptions, IBeaconNodeOptions} from "@chainsafe/lodestar";
+import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {ICliCommandOptions, extractJwtHexSecret} from "../../util/index.js";
 import {ExecutionEngineArgs} from "./execution.js";
 
@@ -10,6 +10,7 @@ export interface IEth1Args {
   "eth1.depositContractDeployBlock": number;
   "eth1.disableEth1DepositDataTracker": boolean;
   "eth1.unsafeAllowDepositDataOverwrite": boolean;
+  "eth1.forcedEth1DataVote": string;
 }
 
 export function parseArgs(args: IEth1Args & Partial<ExecutionEngineArgs>): IBeaconNodeOptions["eth1"] {
@@ -39,6 +40,7 @@ export function parseArgs(args: IEth1Args & Partial<ExecutionEngineArgs>): IBeac
     depositContractDeployBlock: args["eth1.depositContractDeployBlock"],
     disableEth1DepositDataTracker: args["eth1.disableEth1DepositDataTracker"],
     unsafeAllowDepositDataOverwrite: args["eth1.unsafeAllowDepositDataOverwrite"],
+    forcedEth1DataVote: args["eth1.forcedEth1DataVote"],
   };
 }
 
@@ -86,6 +88,13 @@ export const options: ICliCommandOptions<IEth1Args> = {
       "Allow the deposit tracker to overwrite previously fetched and saved deposit event data. Warning!!! This is an unsafe operation, so enable this flag only if you know what you are doing.",
     type: "boolean",
     defaultDescription: String(defaultOptions.eth1.unsafeAllowDepositDataOverwrite),
+    group: "eth1",
+  },
+
+  "eth1.forcedEth1DataVote": {
+    hidden: true,
+    description: "Vote for a specific eth1_data regardless of all conditions. Hex encoded ssz serialized Eth1Data type",
+    type: "string",
     group: "eth1",
   },
 };
