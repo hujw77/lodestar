@@ -1,5 +1,5 @@
 import {fetch} from "cross-fetch";
-import {ErrorAborted, ILogger, TimeoutError} from "@chainsafe/lodestar-utils";
+import {ErrorAborted, ILogger, TimeoutError} from "@lodestar/utils";
 import {ReqGeneric, RouteDef} from "../index.js";
 import {stringifyQuery, urlJoin} from "./format.js";
 import {Metrics} from "./metrics.js";
@@ -23,6 +23,7 @@ export type FetchOpts = {
   headers?: ReqGeneric["headers"];
   /** Optional, for metrics */
   routeId?: string;
+  timeoutMs?: number;
 };
 
 export interface IHttpClient {
@@ -85,7 +86,7 @@ export class HttpClient implements IHttpClient {
   private async requestWithBody<T>(opts: FetchOpts, getBody: (res: Response) => Promise<T>): Promise<T> {
     // Implement fetch timeout
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+    const timeout = setTimeout(() => controller.abort(), opts.timeoutMs ?? this.timeoutMs);
 
     // Attach global signal to this request's controller
     const onGlobalSignalAbort = controller.abort.bind(controller);

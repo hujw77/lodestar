@@ -1,5 +1,5 @@
-import {altair, phase0, Root, Slot, ssz} from "@chainsafe/lodestar-types";
-import bls from "@chainsafe/bls";
+import {altair, phase0, Root, Slot, ssz} from "@lodestar/types";
+import bls from "@chainsafe/bls/switchable";
 import type {PublicKey, Signature} from "@chainsafe/bls/types";
 import {
   FINALIZED_ROOT_INDEX,
@@ -8,9 +8,9 @@ import {
   NEXT_SYNC_COMMITTEE_DEPTH,
   MIN_SYNC_COMMITTEE_PARTICIPANTS,
   DOMAIN_SYNC_COMMITTEE,
-} from "@chainsafe/lodestar-params";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {routes} from "@chainsafe/lodestar-api";
+} from "@lodestar/params";
+import {IBeaconConfig} from "@lodestar/config";
+import {routes} from "@lodestar/api";
 import {isValidMerkleBranch} from "./utils/verifyMerkleBranch.js";
 import {assertZeroHashes, getParticipantPubkeys, isEmptyHeader} from "./utils/utils.js";
 import {SyncCommitteeFast} from "./types.js";
