@@ -33,18 +33,21 @@ jobs:
       - uses: benjlevesque/short-sha@v1.2
 
       - name: Prepare deps
+        working-directory: ssz
         run: |
-          cd ssz
+          set -xe
           yarn
           yarn build
 
       - name: Build package
         run: |
+          set -xe
           yarn
           rm -rf node_modules/@chainsafe/persistent-merkle-tree
           mv ssz/packages/persistent-merkle-tree node_modules/@chainsafe
           yarn build
           rm .dockerignore # we build image from github action. so we don't need this file
+          ls -la
 
       - name: Build and publish image
         uses: docker/build-push-action@v3
