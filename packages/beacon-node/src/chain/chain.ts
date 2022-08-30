@@ -10,19 +10,11 @@ import {
   isCachedBeaconState,
   Index2PubkeyCache,
   PubkeyIndexMap,
-<<<<<<< HEAD:packages/lodestar/src/chain/chain.ts
-} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@chainsafe/lodestar-fork-choice";
-import {ILogger, toHex} from "@chainsafe/lodestar-utils";
-=======
 } from "@lodestar/state-transition";
 import {IBeaconConfig} from "@lodestar/config";
 import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex} from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ILogger, toHex} from "@lodestar/utils";
->>>>>>> stream/unstable:packages/beacon-node/src/chain/chain.ts
 import {CompositeTypeAny, fromHexString, TreeView, Type} from "@chainsafe/ssz";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
@@ -63,10 +55,7 @@ import {ReprocessController} from "./reprocess.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
-<<<<<<< HEAD:packages/lodestar/src/chain/chain.ts
-=======
 import {CheckpointBalancesCache} from "./balancesCache.js";
->>>>>>> stream/unstable:packages/beacon-node/src/chain/chain.ts
 import {ChainEvent} from "./index.js";
 
 export class BeaconChain implements IBeaconChain {
@@ -228,36 +217,7 @@ export class BeaconChain implements IBeaconChain {
 
     this.reprocessController = new ReprocessController(this.metrics);
 
-<<<<<<< HEAD:packages/lodestar/src/chain/chain.ts
-    this.blockProcessor = new BlockProcessor(
-      {
-        clock,
-        bls,
-        regen,
-        executionEngine,
-        eth1,
-        db,
-        forkChoice,
-        lightClientServer,
-        stateCache,
-        checkpointStateCache,
-        seenAggregatedAttestations: this.seenAggregatedAttestations,
-        seenBlockAttesters: this.seenBlockAttesters,
-        beaconProposerCache: this.beaconProposerCache,
-        reprocessController: this.reprocessController,
-        emitter,
-        config,
-        logger,
-        metrics,
-        persistInvalidSszValue: this.persistInvalidSszValue.bind(this),
-        persistInvalidSszView: this.persistInvalidSszView.bind(this),
-      },
-      opts,
-      signal
-    );
-=======
     this.blockProcessor = new BlockProcessor(this, metrics, opts, signal);
->>>>>>> stream/unstable:packages/beacon-node/src/chain/chain.ts
 
     this.forkChoice = forkChoice;
     this.clock = clock;
@@ -269,14 +229,10 @@ export class BeaconChain implements IBeaconChain {
     this.lightClientServer = lightClientServer;
 
     this.archiver = new Archiver(db, this, logger, signal, opts);
-<<<<<<< HEAD:packages/lodestar/src/chain/chain.ts
-    new PrecomputeNextEpochTransitionScheduler(this, this.config, metrics, this.logger, signal);
-=======
     // always run PrepareNextSlotScheduler except for fork_choice spec tests
     if (!opts?.disablePrepareNextSlot) {
       new PrepareNextSlotScheduler(this, this.config, metrics, this.logger, signal);
     }
->>>>>>> stream/unstable:packages/beacon-node/src/chain/chain.ts
 
     metrics?.opPool.aggregatedAttestationPoolSize.addCollect(() => this.onScrapeMetrics());
 
@@ -555,8 +511,6 @@ export class BeaconChain implements IBeaconChain {
     this.seenAggregatedAttestations.prune(epoch);
     this.seenBlockAttesters.prune(epoch);
     this.beaconProposerCache.prune(epoch);
-<<<<<<< HEAD:packages/lodestar/src/chain/chain.ts
-=======
 
     // Poll for merge block in the background to speed-up block production. Only if:
     // - after BELLATRIX_FORK_EPOCH
@@ -568,7 +522,6 @@ export class BeaconChain implements IBeaconChain {
         this.eth1.startPollingMergeBlock();
       }
     }
->>>>>>> stream/unstable:packages/beacon-node/src/chain/chain.ts
   }
 
   private onForkChoiceHead(head: ProtoBlock): void {

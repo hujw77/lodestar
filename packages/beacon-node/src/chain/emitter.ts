@@ -1,17 +1,10 @@
 import {EventEmitter} from "events";
 import StrictEventEmitter from "strict-event-emitter-types";
 
-<<<<<<< HEAD:packages/lodestar/src/chain/emitter.ts
-import {routes} from "@chainsafe/lodestar-api";
-import {phase0, Epoch, Slot, allForks} from "@chainsafe/lodestar-types";
-import {CheckpointWithHex, ProtoBlock} from "@chainsafe/lodestar-fork-choice";
-import {CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
-=======
 import {routes} from "@lodestar/api";
 import {phase0, Epoch, Slot, allForks} from "@lodestar/types";
 import {CheckpointWithHex, ProtoBlock} from "@lodestar/fork-choice";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
->>>>>>> stream/unstable:packages/beacon-node/src/chain/emitter.ts
 
 /**
  * Important chain events that occur during normal chain operation.
