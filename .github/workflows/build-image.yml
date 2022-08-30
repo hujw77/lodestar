@@ -35,12 +35,12 @@ jobs:
       - name: Prepare deps
         run: |
           cd ssz
-          yarn install --production
+          yarn
           yarn build
 
       - name: Build package
         run: |
-          yarn install --production
+          yarn
           rm -rf node_modules/@chainsafe/persistent-merkle-tree
           mv ssz/packages/persistent-merkle-tree node_modules/@chainsafe
           yarn build
