@@ -49,11 +49,16 @@ jobs:
           rm .dockerignore # we build image from github action. so we don't need this file
           ls -la
 
-      - name: Build and publish image
-        uses: docker/build-push-action@v3
-        with:
-          push: true
-          tags: ${{ env.DOCKER_REGISTRY }}/${{ github.repository }}:sha-${{ env.SHA }}
-          file: hack.Dockerfile
+      # - name: Build and publish image
+      #   uses: docker/build-push-action@v3
+      #   with:
+      #     push: true
+      #     tags: ${{ env.DOCKER_REGISTRY }}/${{ github.repository }}:sha-${{ env.SHA }}
+      #     file: hack.Dockerfile
 
+      - name: Build and publish image
+        run: |
+          IMAGE_NAME=${{ env.DOCKER_REGISTRY }}/${{ github.repository }}:sha-${{ env.SHA }}
+          docker build -f hack.Dockerfile -t $IMAGE_NAME .
+          docker push $IMAGE_NAME
 
