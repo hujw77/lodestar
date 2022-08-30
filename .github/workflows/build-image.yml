@@ -44,6 +44,7 @@ jobs:
           rm -rf node_modules/@chainsafe/persistent-merkle-tree
           mv ssz/packages/persistent-merkle-tree node_modules/@chainsafe
           yarn build
+          rm .dockerignore # we build image from github action. so we don't need this file
 
       - name: Build and publish image
         uses: docker/build-push-action@v3
