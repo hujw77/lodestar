@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import {IChainForkConfig} from "@lodestar/config";
+import {ENR} from "@chainsafe/discv5";
 import {
   BeaconNodeOptions,
   getBeaconConfigFromArgs,
@@ -52,15 +53,6 @@ export async function initializeOptionsAndConfig(args: IBeaconArgs & IGlobalArgs
     }
   }
 
-  // Apply port option
-  if (args.port !== undefined) {
-    beaconNodeOptions.set({network: {localMultiaddrs: [`/ip4/0.0.0.0/tcp/${args.port}`]}});
-    const discoveryPort = args.discoveryPort ?? args.port;
-    beaconNodeOptions.set({network: {discv5: {bindAddr: `/ip4/0.0.0.0/udp/${discoveryPort}`}}});
-  } else if (args.discoveryPort !== undefined) {
-    beaconNodeOptions.set({network: {discv5: {bindAddr: `/ip4/0.0.0.0/udp/${args.discoveryPort}`}}});
-  }
-
   // initialize params file, if it doesn't exist
   const config = getBeaconConfigFromArgs(args);
 
@@ -74,7 +66,7 @@ export async function persistOptionsAndConfig(args: IBeaconArgs & IGlobalArgs): 
   const beaconPaths = getBeaconPaths(args);
 
   // initialize directories
-  mkdir(beaconPaths.rootDir);
+  mkdir(beaconPaths.dataDir);
   mkdir(beaconPaths.beaconDir);
   mkdir(beaconPaths.dbDir);
 
@@ -90,10 +82,23 @@ export async function persistOptionsAndConfig(args: IBeaconArgs & IGlobalArgs): 
     initEnr(beaconPaths.enrFile, peerId);
   } else {
     // Verify that the peerId matches the ENR
-    const enr = readEnr(beaconPaths.enrFile);
-    const peerIdPrev = await enr.peerId();
-    if (peerIdPrev.toB58String() !== peerId.toB58String()) {
+    let enr: ENR | null = null;
+    try {
+      // Note: it has happened that the ENR file gets corrupted, if that happens don't kill the node
+      // https://github.com/ChainSafe/lodestar/issues/4082
+      enr = readEnr(beaconPaths.enrFile);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error(`Persisted ENR is invalid, creating a new ENR: ${(e as Error).message}`);
+    }
+
+    if (!enr) {
       initEnr(beaconPaths.enrFile, peerId);
+    } else {
+      const peerIdPrev = await enr.peerId();
+      if (peerIdPrev.toB58String() !== peerId.toB58String()) {
+        initEnr(beaconPaths.enrFile, peerId);
+      }
     }
   }
 }

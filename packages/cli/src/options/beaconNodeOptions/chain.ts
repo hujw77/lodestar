@@ -10,8 +10,9 @@ export interface IChainArgs {
   // as this is defined as part of IBeaconPaths
   // "chain.persistInvalidSszObjectsDir": string;
   "chain.proposerBoostEnabled": boolean;
+  "chain.disableImportExecutionFcU": boolean;
   "chain.computeUnrealized": boolean;
-  "chain.defaultFeeRecipient": string;
+  suggestedFeeRecipient: string;
   "chain.assertCorrectProgressiveBalances": boolean;
   "chain.maxSkipSlots": number;
   "safe-slots-to-import-optimistically": number;
@@ -26,8 +27,9 @@ export function parseArgs(args: IChainArgs): IBeaconNodeOptions["chain"] {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
     persistInvalidSszObjectsDir: undefined as any,
     proposerBoostEnabled: args["chain.proposerBoostEnabled"],
+    disableImportExecutionFcU: args["chain.disableImportExecutionFcU"],
     computeUnrealized: args["chain.computeUnrealized"],
-    defaultFeeRecipient: args["chain.defaultFeeRecipient"],
+    defaultFeeRecipient: args["suggestedFeeRecipient"],
     assertCorrectProgressiveBalances: args["chain.assertCorrectProgressiveBalances"],
     maxSkipSlots: args["chain.maxSkipSlots"],
     safeSlotsToImportOptimistically: args["safe-slots-to-import-optimistically"],
@@ -69,20 +71,29 @@ Will double processing times. Use only for debugging purposes.",
   },
 
   "chain.proposerBoostEnabled": {
+    hidden: true,
     type: "boolean",
     description: "Enable proposer boost to reward a timely block",
     defaultDescription: String(defaultOptions.chain.proposerBoostEnabled),
     group: "chain",
   },
 
+  "chain.disableImportExecutionFcU": {
+    hidden: true,
+    type: "boolean",
+    description: "Disable issuing FcUs to the execution engine on block import",
+    group: "chain",
+  },
+
   "chain.computeUnrealized": {
+    hidden: true,
     type: "boolean",
     description: "Compute unrealized checkpoints and use it in fork choice or not",
     defaultDescription: String(defaultOptions.chain.computeUnrealized),
     group: "chain",
   },
 
-  "chain.defaultFeeRecipient": {
+  suggestedFeeRecipient: {
     type: "string",
     description:
       "Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$) in case validator fails to update for a validator index before calling produceBlock.",
@@ -98,6 +109,7 @@ Will double processing times. Use only for debugging purposes.",
   },
 
   "chain.assertCorrectProgressiveBalances": {
+    hidden: true,
     description: "Enable asserting the progressive balances",
     type: "boolean",
     group: "chain",
