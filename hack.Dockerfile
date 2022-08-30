@@ -1,5 +1,5 @@
 
-FROM node:16-alpine
+FROM node:16
 WORKDIR /usr/app
 COPY . /usr/app
 
