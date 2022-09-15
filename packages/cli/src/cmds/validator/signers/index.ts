@@ -35,16 +35,21 @@ import {importKeystoreDefinitionsFromExternalDir, readPassphraseOrPrompt} from "
  * - Fetched directly from remote signer API
  * - Remote signer definition imported from keymanager api
  */
-export async function getSignersFromArgs(args: IValidatorCliArgs & IGlobalArgs): Promise<Signer[]> {
+export async function getSignersFromArgs(args: IValidatorCliArgs & IGlobalArgs, network: string): Promise<Signer[]> {
   // ONLY USE FOR TESTNETS - Derive interop keys
   if (args.interopIndexes) {
     const indexes = parseRange(args.interopIndexes);
-    return indexes.map((index) => ({type: SignerType.Local, secretKey: interopSecretKey(index)}));
+    // Using a remote signer with TESTNETS
+    if (args["externalSigner.pubkeys"] || args["externalSigner.fetch"]) {
+      return getRemoteSigners(args);
+    } else {
+      return indexes.map((index) => ({type: SignerType.Local, secretKey: interopSecretKey(index)}));
+    }
   }
 
   // UNSAFE, ONLY USE FOR TESTNETS - Derive keys directly from a mnemonic
   else if (args.fromMnemonic) {
-    if (args.network === defaultNetwork) {
+    if (network === defaultNetwork) {
       throw new YargsError("fromMnemonic must only be used in testnets");
     }
     if (!args.mnemonicIndexes) {
@@ -71,26 +76,12 @@ export async function getSignersFromArgs(args: IValidatorCliArgs & IGlobalArgs):
 
   // Remote keys declared manually with --externalSignerPublicKeys
   else if (args["externalSigner.pubkeys"] || args["externalSigner.fetch"]) {
-    const externalSignerUrl = args["externalSigner.url"];
-    if (!externalSignerUrl) {
-      throw new YargsError("Must set externalSignerUrl with externalSignerPublicKeys");
-    }
-    if (!isValidHttpUrl(externalSignerUrl)) {
-      throw new YargsError(`Invalid external signer URL ${externalSignerUrl}`);
-    }
-    if (args["externalSigner.pubkeys"] && args["externalSigner.pubkeys"].length === 0) {
-      throw new YargsError("externalSignerPublicKeys is set to an empty list");
-    }
-
-    const pubkeys = args["externalSigner.pubkeys"] ?? (await externalSignerGetKeys(externalSignerUrl));
-    assertValidPubkeysHex(pubkeys);
-
-    return pubkeys.map((pubkey) => ({type: SignerType.Remote, pubkey, url: externalSignerUrl}));
+    return getRemoteSigners(args);
   }
 
   // Read keys from local account manager
   else {
-    const accountPaths = getAccountPaths(args);
+    const accountPaths = getAccountPaths(args, network);
     const persistedKeysBackend = new PersistedKeysBackend(accountPaths);
 
     // Read and decrypt local keystores, imported via keymanager api or import cmd
@@ -113,4 +104,22 @@ export function getSignerPubkeyHex(signer: Signer): string {
     case SignerType.Remote:
       return signer.pubkey;
   }
+}
+
+async function getRemoteSigners(args: IValidatorCliArgs & IGlobalArgs): Promise<Signer[]> {
+  const externalSignerUrl = args["externalSigner.url"];
+  if (!externalSignerUrl) {
+    throw new YargsError("Must set externalSignerUrl with externalSignerPublicKeys");
+  }
+  if (!isValidHttpUrl(externalSignerUrl)) {
+    throw new YargsError(`Invalid external signer URL ${externalSignerUrl}`);
+  }
+  if (args["externalSigner.pubkeys"] && args["externalSigner.pubkeys"].length === 0) {
+    throw new YargsError("externalSignerPublicKeys is set to an empty list");
+  }
+
+  const pubkeys = args["externalSigner.pubkeys"] ?? (await externalSignerGetKeys(externalSignerUrl));
+  assertValidPubkeysHex(pubkeys);
+
+  return pubkeys.map((pubkey) => ({type: SignerType.Remote, pubkey, url: externalSignerUrl}));
 }

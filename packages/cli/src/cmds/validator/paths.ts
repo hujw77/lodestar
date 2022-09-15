@@ -10,6 +10,7 @@ export type AccountPaths = {
   keystoresDir: string;
   secretsDir: string;
   remoteKeysDir: string;
+  proposerDir: string;
 };
 
 /**
@@ -22,13 +23,15 @@ export type AccountPaths = {
  * ```
  */
 export function getValidatorPaths(
-  args: Partial<IValidatorPaths> & Pick<IGlobalArgs, "dataDir">
+  args: Partial<IValidatorPaths> & Pick<IGlobalArgs, "dataDir">,
+  network: string
 ): IValidatorPaths & IGlobalPaths {
   // Compute global paths first
-  const globalPaths = getGlobalPaths(args);
+  const globalPaths = getGlobalPaths(args, network);
 
   const dataDir = globalPaths.dataDir;
-  const validatorsDbDir = args.validatorsDbDir || path.join(dataDir, "validator-db");
+  const validatorsDbDir = args.validatorsDbDir ?? path.join(dataDir, "validator-db");
+
   return {
     ...globalPaths,
     validatorsDbDir,
@@ -38,7 +41,7 @@ export function getValidatorPaths(
 /**
  * Constructs representations of the path structure to show in command's description
  */
-export const defaultValidatorPaths = getValidatorPaths({dataDir: "$dataDir"});
+export const defaultValidatorPaths = getValidatorPaths({dataDir: "$dataDir"}, "$network");
 
 /**
  * Defines the path structure of the account files
@@ -63,24 +66,27 @@ export const defaultValidatorPaths = getValidatorPaths({dataDir: "$dataDir"});
  */
 // Using Pick<IGlobalArgs, "dataDir"> make changes in IGlobalArgs throw a type error here
 export function getAccountPaths(
-  args: Partial<AccountPaths> & Pick<IGlobalArgs, "dataDir">
+  args: Partial<AccountPaths> & Pick<IGlobalArgs, "dataDir">,
+  network: string
 ): AccountPaths & IGlobalPaths {
   // Compute global paths first
-  const globalPaths = getGlobalPaths(args);
+  const globalPaths = getGlobalPaths(args, network);
 
   const dataDir = globalPaths.dataDir;
   const keystoresDir = args.keystoresDir || path.join(dataDir, "keystores");
   const secretsDir = args.secretsDir || path.join(dataDir, "secrets");
   const remoteKeysDir = args.remoteKeysDir || path.join(dataDir, "remoteKeys");
+  const proposerDir = args.proposerDir || path.join(dataDir, "proposerConfigs");
   return {
     ...globalPaths,
     keystoresDir,
     secretsDir,
     remoteKeysDir,
+    proposerDir,
   };
 }
 
 /**
  * Constructs representations of the path structure to show in command's description
  */
-export const defaultAccountPaths = getAccountPaths({dataDir: "$dataDir"});
+export const defaultAccountPaths = getAccountPaths({dataDir: "$dataDir"}, "$network");

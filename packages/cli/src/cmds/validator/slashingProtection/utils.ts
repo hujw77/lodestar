@@ -8,23 +8,22 @@ import {YargsError} from "../../../util/index.js";
 import {IGlobalArgs} from "../../../options/index.js";
 import {getValidatorPaths} from "../paths.js";
 import {getBeaconConfigFromArgs} from "../../../config/index.js";
-import {errorLogger} from "../../../util/logger.js";
 import {ISlashingProtectionArgs} from "./options.js";
 
 /**
  * Returns a new SlashingProtection object instance based on global args.
  */
 export function getSlashingProtection(
-  args: IGlobalArgs
+  args: IGlobalArgs,
+  network: string
 ): {slashingProtection: SlashingProtection; metadata: MetaDataRepository} {
-  const validatorPaths = getValidatorPaths(args);
+  const validatorPaths = getValidatorPaths(args, network);
   const dbPath = validatorPaths.validatorsDbDir;
-  const config = getBeaconConfigFromArgs(args);
-  const logger = errorLogger();
+  const {config} = getBeaconConfigFromArgs(args);
 
   const dbOpts: IDatabaseApiOptions = {
     config,
-    controller: new LevelDbController({name: dbPath}, {logger}),
+    controller: new LevelDbController({name: dbPath}, {}),
   };
 
   return {
@@ -44,7 +43,7 @@ export async function getGenesisValidatorsRoot(args: IGlobalArgs & ISlashingProt
     return fromHex(networkGenesis.genesisValidatorsRoot);
   }
 
-  const config = getBeaconConfigFromArgs(args);
+  const {config} = getBeaconConfigFromArgs(args);
   const api = getClient({baseUrl: server}, {config});
   const genesis = await api.beacon.getGenesis();
 

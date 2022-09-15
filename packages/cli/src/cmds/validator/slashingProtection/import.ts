@@ -5,7 +5,6 @@ import {IGlobalArgs} from "../../../options/index.js";
 import {AccountValidatorArgs} from "../options.js";
 import {getCliLogger, ILogArgs} from "../../../util/index.js";
 import {getBeaconConfigFromArgs} from "../../../config/index.js";
-import {getBeaconPaths} from "../../beacon/paths.js";
 import {getValidatorPaths} from "../paths.js";
 import {getGenesisValidatorsRoot, getSlashingProtection} from "./utils.js";
 import {ISlashingProtectionArgs} from "./options.js";
@@ -40,15 +39,15 @@ export const importCmd: ICliCommand<
   },
 
   handler: async (args) => {
-    const beaconPaths = getBeaconPaths(args);
-    const config = getBeaconConfigFromArgs(args);
-    const logger = getCliLogger(args, beaconPaths, config);
+    const {config, network} = getBeaconConfigFromArgs(args);
+    // slashingProtection commands are fast so do not require logFile feature
+    const logger = getCliLogger(args, {defaultLogFile: "validator.log"}, config);
 
-    const {validatorsDbDir: dbPath} = getValidatorPaths(args);
+    const {validatorsDbDir: dbPath} = getValidatorPaths(args, network);
 
     logger.info("Importing the slashing protection logs", {dbPath});
 
-    const {slashingProtection, metadata} = getSlashingProtection(args);
+    const {slashingProtection, metadata} = getSlashingProtection(args, network);
 
     // Fetch genesisValidatorsRoot from:
     // - existing cached in validator DB

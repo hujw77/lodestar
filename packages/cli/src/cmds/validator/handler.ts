@@ -1,37 +1,41 @@
+import {setMaxListeners} from "node:events";
 import {LevelDbController} from "@lodestar/db";
-import {ProcessShutdownCallback, SlashingProtection, Validator, defaultOptions} from "@lodestar/validator";
+import {ProcessShutdownCallback, SlashingProtection, Validator, ValidatorProposerConfig} from "@lodestar/validator";
 import {getMetrics, MetricsRegister} from "@lodestar/validator";
 import {RegistryMetricCreator, collectNodeJSMetrics, HttpMetricsServer} from "@lodestar/beacon-node";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {IGlobalArgs} from "../../options/index.js";
 import {YargsError, getDefaultGraffiti, mkdir, getCliLogger} from "../../util/index.js";
-import {onGracefulShutdown, parseFeeRecipient} from "../../util/index.js";
+import {onGracefulShutdown, parseFeeRecipient, parseProposerConfig} from "../../util/index.js";
 import {getVersionData} from "../../util/version.js";
-import {getBeaconPaths} from "../beacon/paths.js";
 import {getAccountPaths, getValidatorPaths} from "./paths.js";
 import {IValidatorCliArgs, validatorMetricsDefaultOptions} from "./options.js";
 import {getSignersFromArgs} from "./signers/index.js";
 import {logSigners} from "./signers/logSigners.js";
 import {KeymanagerApi} from "./keymanager/impl.js";
 import {PersistedKeysBackend} from "./keymanager/persistedKeys.js";
+import {IPersistedKeysBackend} from "./keymanager/interface.js";
 import {KeymanagerRestApiServer} from "./keymanager/server.js";
 
 /**
  * Runs a validator client.
  */
 export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): Promise<void> {
-  const graffiti = args.graffiti || getDefaultGraffiti();
-  const suggestedFeeRecipient = parseFeeRecipient(args.suggestedFeeRecipient ?? defaultOptions.defaultFeeRecipient);
+  const {config, network} = getBeaconConfigFromArgs(args);
+
   const doppelgangerProtectionEnabled = args.doppelgangerProtectionEnabled;
 
-  const validatorPaths = getValidatorPaths(args);
-  const beaconPaths = getBeaconPaths(args);
-  const config = getBeaconConfigFromArgs(args);
+  const validatorPaths = getValidatorPaths(args, network);
+  const accountPaths = getAccountPaths(args, network);
 
-  const logger = getCliLogger(args, beaconPaths, config);
+  const logger = getCliLogger(args, {defaultLogFile: "validator.log"}, config);
+
+  const persistedKeysBackend = new PersistedKeysBackend(accountPaths);
+  const valProposerConfig = getProposerConfigFromArgs(args, {persistedKeysBackend, accountPaths});
 
   const {version, commit} = getVersionData();
-  logger.info("Lodestar", {network: args.network, version, commit});
+  logger.info("Lodestar", {network, version, commit});
+  logger.info("Connecting to LevelDB database", {path: validatorPaths.validatorsDbDir});
 
   const dbPath = validatorPaths.validatorsDbDir;
   mkdir(dbPath);
@@ -53,7 +57,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
    *
    * Note: local signers are already locked once returned from this function.
    */
-  const signers = await getSignersFromArgs(args);
+  const signers = await getSignersFromArgs(args, network);
 
   // Ensure the validator has at least one key
   if (signers.length === 0) {
@@ -66,13 +70,19 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
 
   logSigners(logger, signers);
 
-  // This AbortController interrupts the sleep() calls when waiting for genesis
-  const controller = new AbortController();
-  onGracefulShutdownCbs.push(async () => controller.abort());
+  // This AbortController interrupts various validators ops: genesis req, clients call, clock etc
+  const abortController = new AbortController();
+
+  // We set infinity for abort controller used for validator operations,
+  // to prevent MaxListenersExceededWarning which get logged when listeners > 10
+  // Since it is perfectly fine to have listeners > 10
+  setMaxListeners(Infinity, abortController.signal);
+
+  onGracefulShutdownCbs.push(async () => abortController.abort());
 
   const dbOps = {
     config,
-    controller: new LevelDbController({name: dbPath}, {logger}),
+    controller: new LevelDbController({name: dbPath}, {metrics: null}),
   };
   const slashingProtection = new SlashingProtection(dbOps);
 
@@ -80,8 +90,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   // Send version and network data for static registries
 
   const register = args["metrics"] ? new RegistryMetricCreator() : null;
-  const metrics =
-    register && getMetrics((register as unknown) as MetricsRegister, {version, commit, network: args.network});
+  const metrics = register && getMetrics((register as unknown) as MetricsRegister, {version, commit, network});
 
   // Start metrics server if metrics are enabled.
   // Collect NodeJS metrics defined in the Lodestar repo
@@ -97,8 +106,6 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     await metricsServer.start();
   }
 
-  const builder = args["builder"] ? {enabled: true} : {};
-
   // This promise resolves once genesis is available.
   // It will wait for genesis, so this promise can be potentially very long
 
@@ -110,13 +117,11 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
       logger,
       processShutdownCallback,
       signers,
-      graffiti,
+      abortController,
       doppelgangerProtectionEnabled,
       afterBlockDelaySlotFraction: args.afterBlockDelaySlotFraction,
-      defaultFeeRecipient: suggestedFeeRecipient,
-      builder,
+      valProposerConfig,
     },
-    controller.signal,
     metrics
   );
 
@@ -125,15 +130,22 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   // Start keymanager API backend
   // Only if keymanagerEnabled flag is set to true
   if (args["keymanager"]) {
-    const accountPaths = getAccountPaths(args);
-    const keymanagerApi = new KeymanagerApi(validator, new PersistedKeysBackend(accountPaths));
+    // if proposerSettingsFile provided disable the key proposerConfigWrite in keymanager
+    const proposerConfigWriteDisabled = args.proposerSettingsFile !== undefined;
+    if (proposerConfigWriteDisabled) {
+      logger.warn(
+        "Proposer data updates (feeRecipient/gasLimit etc) will not be available via Keymanager API as proposerSettingsFile has been set"
+      );
+    }
 
+    const keymanagerApi = new KeymanagerApi(validator, persistedKeysBackend, proposerConfigWriteDisabled);
     const keymanagerServer = new KeymanagerRestApiServer(
       {
         address: args["keymanager.address"],
         port: args["keymanager.port"],
         cors: args["keymanager.cors"],
         isAuthEnabled: args["keymanager.authEnabled"],
+        bodyLimit: args["keymanager.bodyLimit"],
         tokenDir: dbPath,
       },
       {config, logger, api: keymanagerApi, metrics: metrics ? metrics.keymanagerApiRest : null}
@@ -141,4 +153,41 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     onGracefulShutdownCbs.push(() => keymanagerServer.close());
     await keymanagerServer.listen();
   }
+}
+
+function getProposerConfigFromArgs(
+  args: IValidatorCliArgs,
+  {
+    persistedKeysBackend,
+    accountPaths,
+  }: {persistedKeysBackend: IPersistedKeysBackend; accountPaths: {proposerDir: string}}
+): ValidatorProposerConfig {
+  const defaultConfig = {
+    graffiti: args.graffiti || getDefaultGraffiti(),
+    strictFeeRecipientCheck: args.strictFeeRecipientCheck,
+    feeRecipient: args.suggestedFeeRecipient ? parseFeeRecipient(args.suggestedFeeRecipient) : undefined,
+    builder: {enabled: args.builder, gasLimit: args.defaultGasLimit},
+  };
+
+  let valProposerConfig: ValidatorProposerConfig;
+  const proposerConfigFromKeymanager = persistedKeysBackend.readProposerConfigs();
+
+  if (Object.keys(proposerConfigFromKeymanager).length > 0) {
+    // from persistedBackend
+    if (args.proposerSettingsFile) {
+      throw new YargsError(
+        `Cannot accept --proposerSettingsFile since it conflicts with proposer configs previously persisted via the keymanager api. Delete directory ${accountPaths.proposerDir} to discard them`
+      );
+    }
+    valProposerConfig = {proposerConfig: proposerConfigFromKeymanager, defaultConfig};
+  } else {
+    // from Proposer Settings File
+    if (args.proposerSettingsFile) {
+      // parseProposerConfig will override the defaults with the arg created defaultConfig
+      valProposerConfig = parseProposerConfig(args.proposerSettingsFile, defaultConfig);
+    } else {
+      valProposerConfig = {defaultConfig} as ValidatorProposerConfig;
+    }
+  }
+  return valProposerConfig;
 }

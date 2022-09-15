@@ -2,7 +2,6 @@ import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import rimraf from "rimraf";
 import {LevelDbController} from "@lodestar/db";
-import {LogLevel, WinstonLogger} from "@lodestar/utils";
 import {config} from "@lodestar/config/default";
 import {
   SlashingProtection,
@@ -18,7 +17,7 @@ chai.use(chaiAsPromised);
 
 describe("slashing-protection custom tests", () => {
   const dbLocation = "./.__testdb_2";
-  const controller = new LevelDbController({name: dbLocation}, {logger: new WinstonLogger({level: LogLevel.error})});
+  const controller = new LevelDbController({name: dbLocation}, {});
   const pubkey = Buffer.alloc(96, 1);
 
   before(async () => {

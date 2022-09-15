@@ -4,7 +4,6 @@ import {IGlobalArgs} from "../../../options/index.js";
 import {AccountValidatorArgs} from "../options.js";
 import {getCliLogger, ILogArgs} from "../../../util/index.js";
 import {getBeaconConfigFromArgs} from "../../../config/index.js";
-import {getBeaconPaths} from "../../beacon/paths.js";
 import {getValidatorPaths} from "../paths.js";
 import {getGenesisValidatorsRoot, getSlashingProtection} from "./utils.js";
 import {ISlashingProtectionArgs} from "./options.js";
@@ -39,17 +38,18 @@ export const exportCmd: ICliCommand<
   },
 
   handler: async (args) => {
-    const beaconPaths = getBeaconPaths(args);
-    const config = getBeaconConfigFromArgs(args);
-    const logger = getCliLogger(args, beaconPaths, config);
+    const {config, network} = getBeaconConfigFromArgs(args);
 
-    const {validatorsDbDir: dbPath} = getValidatorPaths(args);
+    // slashingProtection commands are fast so do not require logFile feature
+    const logger = getCliLogger(args, {defaultLogFile: "validator.log"}, config);
+
+    const {validatorsDbDir: dbPath} = getValidatorPaths(args, network);
 
     // TODO: Allow format version and pubkeys to be customized with CLI args
     const formatVersion: InterchangeFormatVersion = {version: "4", format: "complete"};
     logger.info("Exporting the slashing protection logs", {...formatVersion, dbPath});
 
-    const {slashingProtection, metadata} = getSlashingProtection(args);
+    const {slashingProtection, metadata} = getSlashingProtection(args, network);
 
     // When exporting validator DB should already have genesisValidatorsRoot persisted.
     // For legacy node and general fallback, fetch from:

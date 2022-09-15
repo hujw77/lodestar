@@ -106,16 +106,16 @@ Jul-09 17:34:54.278 []                 info: Syncing - 3 days left - 3.00 slots/
     If your node is stuck with `Searching for peers` review your network configuration to make sure your ports are open.
 <!-- prettier-ignore-end -->
 
-A young testnet should take a few hours to sync. If you see multiple or consistent errors in the logs, please open a [Github issue](https://github.com/ChainSafe/lodestar/issues/new) or reach out to us in [Discord](https://discord.gg/yjyvFRP). Just by reporting anomalities you are helping accelerate the progress of Ethereum Consensus, thanks for contributing!
+A young testnet should take a few hours to sync. If you see multiple or consistent errors in the logs, please open a [Github issue](https://github.com/ChainSafe/lodestar/issues/new) or reach out to us in [Discord](https://discord.gg/yjyvFRP). Just by reporting anomalies you are helping accelerate the progress of Ethereum Consensus, thanks for contributing!
 
 <!-- prettier-ignore-start -->
 !!! warning
     It is dangerous to expose your Beacon APIs publicly as there is no default authentication mechanism provided. Ensure your beacon node host is not exposing ports 8545 or 9596 outside of your internal network. 
 <!-- prettier-ignore-end -->
 
-### Weak subjectivity
+### Checkpoint Sync
 
-If you are starting your node from a blank db/genesis (or from last saved state in db) in a network which is now far ahead, your node is susceptible to "long range attacks."
+If you are starting your node from a blank db/genesis (or from last saved state in db) in a network which is now far ahead, your node is susceptible to "long range attacks" via something called weak subjectivity.
 [Read Vitalik's illuminating post on the same](https://blog.ethereum.org/2014/11/25/proof-stake-learned-love-weak-subjectivity/).
 
 If you have a synced beacon node available (e.g. your friend's node or an infrastructure provider) and a trusted checkpoint you can rely on, you can start off your beacon node in under a minute! And at the same time kicking the "long range attack" in its butt!
@@ -123,13 +123,13 @@ If you have a synced beacon node available (e.g. your friend's node or an infras
 Just supply these **extra args** to your beacon node command:
 
 ```bash
---weakSubjectivitySyncLatest --weakSubjectivityServerUrl <synced node url> [--weakSubjectivityCheckpoint <trusted checkpoint in root:epoch format>]
+--checkpointSyncUrl <synced node url> [--wssCheckpoint <trusted checkpoint in root:epoch format>]
 ```
 
-In case you really trust `weakSubjectivityServerUrl` then you may skip providing `weakSubjectivityCheckpoint`, which will then result into your beacon node syncing and starting off a finalized state from the trusted url.
+In case you really trust `checkpointSyncUrl` then you may skip providing `wssCheckpoint`, which will then result into your beacon node syncing and starting off the recently finalized state from the trusted url.
 
 <!-- prettier-ignore-start -->
 !!! warning
     Please use this option very carefully (and at your own risk), a malicious server URL can put you on the wrong chain with a danger of you losing your funds by social engineering. 
-If possible, validate your `weakSubjectivityCheckpoint` from multiple places (e.g. different client distributions) or from other trusted sources. This will highly reduce the risk of starting off on a malicious chain.
+If possible, validate your `wssCheckpoint` from multiple places (e.g. different client distributions) or from other trusted sources. This will highly reduce the risk of starting off on a malicious chain.
 <!-- prettier-ignore-end -->
