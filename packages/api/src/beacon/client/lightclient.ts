@@ -23,5 +23,11 @@ export function getClient(_config: IChainForkConfig, httpClient: IHttpClient): A
       const proof = deserializeProof(new Uint8Array(buffer));
       return {data: proof};
     },
+
+    async getStateSingleProof(stateId, gindex) {
+      const buffer = await httpClient.arrayBuffer(fetchOptsSerializers.getStateSingleProof(stateId, gindex));
+      const proof = deserializeProof(new Uint8Array(buffer));
+      return {data: proof};
+    },
   };
 }

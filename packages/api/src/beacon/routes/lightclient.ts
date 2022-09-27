@@ -34,6 +34,8 @@ export type Api = {
    * The requested `stateId` may not be available. Regular nodes only keep recent states in memory.
    */
   getStateProof(stateId: string, jsonPaths: JsonPath[]): Promise<{data: Proof}>;
+
+  getStateSingleProof(stateId: string, gindex: number): Promise<{data: Proof}>;
   /**
    * Returns an array of best updates given a `startPeriod` and `count` number of sync committee period to return.
    * Best is defined by (in order of priority):
@@ -61,15 +63,22 @@ export type Api = {
  */
 export const routesData: RoutesData<Api> = {
   getStateProof: {url: "/eth/v1/beacon/light_client/proof/{state_id}", method: "GET"},
+  getStateSingleProof: {url: "/eth/v1/light_client/single_proof/{state_id}", method: "GET"},
   getUpdates: {url: "/eth/v1/beacon/light_client/updates", method: "GET"},
   getOptimisticUpdate: {url: "/eth/v1/beacon/light_client/optimistic_update/", method: "GET"},
   getFinalityUpdate: {url: "/eth/v1/beacon/light_client/finality_update/", method: "GET"},
   getBootstrap: {url: "/eth/v1/beacon/light_client/bootstrap/{block_root}", method: "GET"},
+  getStateProof: {url: "/eth/v1/light_client/proof/:stateId", method: "GET"},
+  getUpdates: {url: "/eth/v1/light_client/updates", method: "GET"},
+  getOptimisticUpdate: {url: "/eth/v1/light_client/optimistic_update/", method: "GET"},
+  getFinalityUpdate: {url: "/eth/v1/light_client/finality_update/", method: "GET"},
+  getBootstrap: {url: "/eth/v1/light_client/bootstrap/:blockRoot", method: "GET"},
 };
 
 /* eslint-disable @typescript-eslint/naming-convention */
 export type ReqTypes = {
   getStateProof: {params: {state_id: string}; query: {paths: string[]}};
+  getStateSingleProof: {params: {state_id: string}; query: {gindex: number}};
   getUpdates: {query: {start_period: number; count: number}};
   getOptimisticUpdate: ReqEmpty;
   getFinalityUpdate: ReqEmpty;
@@ -82,6 +91,12 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       writeReq: (state_id, paths) => ({params: {state_id}, query: {paths: querySerializeProofPathsArr(paths)}}),
       parseReq: ({params, query}) => [params.state_id, queryParseProofPathsArr(query.paths)],
       schema: {params: {state_id: Schema.StringRequired}, body: Schema.AnyArray},
+    },
+
+    getStateSingleProof: {
+      writeReq: (stateId, gindex) => ({params: {stateId}, query: {gindex}}),
+      parseReq: ({params, query}) => [params.stateId, query.gindex],
+      schema: {params: {stateId: Schema.StringRequired}, body: Schema.UintRequired},
     },
 
     getUpdates: {
@@ -132,6 +147,7 @@ export function getReturnTypes(): ReturnTypes<Api> {
   return {
     // Just sent the proof JSON as-is
     getStateProof: sameType(),
+    getStateSingleProof: sameType(),
     getUpdates: ContainerData(ArrayOf(ssz.altair.LightClientUpdate)),
     getOptimisticUpdate: ContainerData(lightclientHeaderUpdate),
     getFinalityUpdate: ContainerData(lightclientFinalizedUpdate),

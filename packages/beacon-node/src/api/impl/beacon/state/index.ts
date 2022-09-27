@@ -21,7 +21,7 @@ export function getBeaconStateApi({
   db,
 }: Pick<ApiModules, "chain" | "config" | "db">): routes.beacon.state.Api {
   async function getState(stateId: routes.beacon.StateId): Promise<BeaconStateAllForks> {
-    return await resolveStateId(config, chain, db, stateId);
+    return await resolveStateId(config, chain, db, stateId, {regenFinalizedState: true});
   }
 
   return {

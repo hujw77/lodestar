@@ -6,7 +6,6 @@ import {resolveStateId} from "../beacon/state/utils.js";
 import {IApiOptions} from "../../options.js";
 
 // TODO: Import from lightclient/server package
-
 export function getLightclientApi(
   opts: IApiOptions,
   {chain, config, db}: Pick<ApiModules, "chain" | "config" | "db">
@@ -37,6 +36,22 @@ export function getLightclientApi(
         data: tree.getProof({
           type: ProofType.treeOffset,
           gindices: Array.from(gindicesSet),
+        }),
+      };
+    },
+
+    async getStateSingleProof(stateId, gindex) {
+      const state = await resolveStateId(config, chain, db, stateId, {regenFinalizedState: true});
+
+      // Commit any changes before computing the state root. In normal cases the state should have no changes here
+      state.commit();
+      const stateNode = state.node;
+      const tree = new Tree(stateNode);
+
+      return {
+        data: tree.getProof({
+          type: ProofType.single,
+          gindex: BigInt(gindex),
         }),
       };
     },
