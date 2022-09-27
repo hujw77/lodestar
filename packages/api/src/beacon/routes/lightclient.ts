@@ -30,12 +30,12 @@ export type LightclientSnapshotWithProof = {
 
 export type Api = {
   /**
-   * Returns a multiproof of `jsonPaths` at the requested `stateId`.
-   * The requested `stateId` may not be available. Regular nodes only keep recent states in memory.
+   * Returns a multiproof of `jsonPaths` at the requested `state_id`.
+   * The requested `state_id` may not be available. Regular nodes only keep recent states in memory.
    */
-  getStateProof(stateId: string, jsonPaths: JsonPath[]): Promise<{data: Proof}>;
+  getStateProof(state_id: string, jsonPaths: JsonPath[]): Promise<{data: Proof}>;
 
-  getStateSingleProof(stateId: string, gindex: number): Promise<{data: Proof}>;
+  getStateSingleProof(state_id: string, gindex: number): Promise<{data: Proof}>;
   /**
    * Returns an array of best updates given a `startPeriod` and `count` number of sync committee period to return.
    * Best is defined by (in order of priority):
@@ -89,9 +89,9 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     },
 
     getStateSingleProof: {
-      writeReq: (stateId, gindex) => ({params: {stateId}, query: {gindex}}),
-      parseReq: ({params, query}) => [params.stateId, query.gindex],
-      schema: {params: {stateId: Schema.StringRequired}, body: Schema.UintRequired},
+      writeReq: (state_id, gindex) => ({params: {state_id}, query: {gindex}}),
+      parseReq: ({params, query}) => [params.state_id, query.gindex],
+      schema: {params: {state_id: Schema.StringRequired}, body: Schema.UintRequired},
     },
 
     getUpdates: {
